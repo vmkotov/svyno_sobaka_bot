@@ -7,7 +7,7 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
-      - 'Dockerfile.yc'
+      - 'Dockerfile'
       - '.github/workflows/deploy.yml'
 
 jobs:
@@ -115,7 +115,7 @@ jobs:
         docker build \
           -t "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:latest" \
           -t "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:${{ github.sha }}" \
-          -f Dockerfile.yc .
+          -f Dockerfile .
           
     - name: Push Docker image
       env:
@@ -149,7 +149,7 @@ jobs:
         fi
         
         yc serverless container revision deploy \
-          --container-name svyno-sobaka-bot \
+          --container-name svyno-sobaka-container \
           --image "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:${{ github.sha }}" \
           --cores 1 \
           --memory 128MB \
@@ -163,7 +163,7 @@ jobs:
       run: |
         sleep 5
         echo "Deployment complete!"
-        yc serverless container revision list --container-name svyno-sobaka-bot --limit 1
+        yc serverless container revision list --container-name svyno-sobaka-container --limit 1
   
   skip-deploy:
     runs-on: ubuntu-latest
