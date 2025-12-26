@@ -384,9 +384,7 @@ telegram-bot-project/
 ├── go.sum                  # Go суммы зависимостей
 ├── .env.example           # Пример переменных окружения
 ├── .gitignore             # Git игнор файл
-├── Dockerfile.yc          # Dockerfile для Yandex Cloud
-├── deploy-yc.sh           # Скрипт деплоя на YC
-├── cloud-init.yaml        # Конфигурация cloud-init
+├── Dockerfile             # Dockerfile для Yandex Cloud
 ├── README.md              # Документация
 └── .github/workflows/     # GitHub Actions
     └── deploy.yml         # Workflow для CI/CD
@@ -487,7 +485,7 @@ on:
       - '**.go'
       - 'go.mod'
       - 'go.sum'
-      - 'Dockerfile.yc'
+      - 'Dockerfile'
       - '.github/workflows/deploy.yml'
 
 jobs:
@@ -535,7 +533,7 @@ jobs:
         echo "$IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
         
         # Сборка и пуш образа
-        docker build -t "cr.yandex/$YC_REGISTRY_ID/telegram-bot:latest" -f Dockerfile.yc .
+        docker build -t "cr.yandex/$YC_REGISTRY_ID/telegram-bot:latest" -f Dockerfile .
         docker push "cr.yandex/$YC_REGISTRY_ID/telegram-bot:latest"
     
     - name: Deploy to Yandex Cloud
@@ -565,7 +563,7 @@ jobs:
             <h2><span class="emoji">🚀</span> 7. Деплой и вебхуки</h2>
             
             <div class="step">
-                <h3>Dockerfile.yc:</h3>
+                <h3>Dockerfile:</h3>
                 <div class="command">
 <code>FROM golang:1.21-alpine AS builder
 
@@ -709,9 +707,8 @@ echo ""
 echo "📋 Следующие шаги:"
 echo "1. Откройте файл .env и добавьте TELEGRAM_BOT_TOKEN"
 echo "2. Отредактируйте main.go под ваши задачи"
-echo "3. (Опционально) Обновите deploy.yml"
-echo "4. Создайте репозиторий на GitHub и настройте секреты"
-echo "5. Запушьте код:"
+echo "3. Создайте репозиторий на GitHub и настройте секреты"
+echo "4. Запушьте код:"
 echo ""
 echo "   git add ."
 echo "   git commit -m 'Initial commit'"
@@ -726,11 +723,13 @@ echo "🎉 После push CI/CD автоматически развернёт �
             <div class="step">
                 <h3>Полезные команды для работы с шаблоном:</h3>
                 <div class="command">
-<code># Быстрая настройка нового бота (одной командой)
-bash <(curl -s https://raw.githubusercontent.com/vmkotov/vmkotov_test_bot/main/scripts/create-bot.sh)
+<code># Быстрое создание нового бота
+git clone https://github.com/vmkotov/vmkotov_test_bot.git my-new-bot
+cd my-new-bot
+rm -rf .git && git init
+go mod init my-new-bot
 
 # Сброс и пересоздание (если что-то пошло не так)
-cd my-bot
 rm -rf .git
 git init
 go mod tidy
