@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	// =========================================
 	log.Println("🚀 Запуск тестового бота v4 (аналог работающего)...")
 
 	if err := godotenv.Load(); err != nil {
@@ -31,8 +32,15 @@ func main() {
 	botAPI.Debug = true
 	log.Printf("✅ Авторизован как @%s", botAPI.Self.UserName)
 
+	// =========================================
+	// СОЗДАЕМ FORWARDER
+	// =========================================
+	forwardChatID := int64(-1003677836395)
+	forwarder := bot.NewMessageForwarder(botAPI, forwardChatID)
+	log.Printf("📍 ID чата для пересылки: %d", forwardChatID)
+
 	// Создаем обработчик Telegram как в работающем боте
-	telegramHandler := bot.NewTelegramHandler(botAPI)
+	telegramHandler := bot.NewTelegramHandler(botAPI, forwarder)
 
 	// Настраиваем HTTP роутер
 	http.HandleFunc("/", telegramHandler.HandleWebhook)
@@ -47,4 +55,5 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
 // Auto-deploy trigger пятница, 26 декабря 2025 г. 22:15:14 (MSK)

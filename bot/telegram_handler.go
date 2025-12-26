@@ -12,13 +12,15 @@ import (
 
 // TelegramHandler обрабатывает вебхуки от Telegram
 type TelegramHandler struct {
-    bot *tgbotapi.BotAPI
+    bot       *tgbotapi.BotAPI
+    forwarder *MessageForwarder
 }
 
 // NewTelegramHandler создает новый обработчик Telegram
-func NewTelegramHandler(bot *tgbotapi.BotAPI) *TelegramHandler {
+func NewTelegramHandler(bot *tgbotapi.BotAPI, forwarder *MessageForwarder) *TelegramHandler {
     return &TelegramHandler{
-        bot: bot,
+        bot:       bot,
+        forwarder: forwarder,
     }
 }
 
@@ -58,6 +60,13 @@ func (th *TelegramHandler) HandleWebhook(w http.ResponseWriter, r *http.Request)
 func (th *TelegramHandler) processMessage(update *tgbotapi.Update) {
     msg := update.Message
     log.Printf("💬 Message from @%s: %s", msg.From.UserName, msg.Text)
+    
+    // =========================================
+    // ПЕРЕСЫЛКА СООБЩЕНИЙ
+    // =========================================
+    if th.forwarder != nil {
+        th.forwarder.Forward(msg)
+    }
     
     if msg.IsCommand() {
         switch msg.Command() {
