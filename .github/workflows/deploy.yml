@@ -115,7 +115,7 @@ jobs:
         docker build \
           -t "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:latest" \
           -t "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:${{ github.sha }}" \
-          -f Dockerfile .
+          -f ./Dockerfile .
           
     - name: Push Docker image
       env:
