@@ -26,7 +26,6 @@ jobs:
           YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
-          # Проверяем через переменные окружения, а не напрямую ${{ }}
           missing_secrets=""
           
           if [ -z "$YC_IAM_KEY_JSON" ]; then
@@ -54,11 +53,11 @@ jobs:
           fi
           
           if [ -n "$missing_secrets" ]; then
-            echo "⚠️  Missing secrets:$missing_secrets"
+            echo "Missing secrets:$missing_secrets"
             echo "secrets-exist=false" >> $GITHUB_OUTPUT
             echo "Skipping deployment. Add missing secrets in GitHub Settings."
           else
-            echo "✅ All required secrets are configured."
+            echo "All required secrets are configured."
             echo "secrets-exist=true" >> $GITHUB_OUTPUT
           fi
   
@@ -97,26 +96,17 @@ jobs:
         YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
         YC_SERVICE_ACCOUNT_ID: ${{ secrets.YC_SERVICE_ACCOUNT_ID }}
       run: |
-        # Создаем файл с IAM ключом из секрета
         echo "$YC_IAM_KEY_JSON" > /tmp/iam-key.json
-        
-        # Настраиваем yc с IAM ключом
         yc config set service-account-key /tmp/iam-key.json
         yc config set cloud-id "$YC_CLOUD_ID"
         yc config set folder-id "$YC_FOLDER_ID"
-        
-        # Проверяем что авторизация работает
         echo "Testing authentication..."
         yc iam service-account get "$YC_SERVICE_ACCOUNT_ID" --format json | jq -r '.name'
         
     - name: Login to Container Registry
       run: |
-        # Получаем IAM токен для Docker
         IAM_TOKEN=$(yc iam create-token)
-        echo "$IAM_TOKEN" | docker login \
-          --username iam \
-          --password-stdin \
-          cr.yandex
+        echo "$IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
           
     - name: Build Docker image
       env:
@@ -140,12 +130,6 @@ jobs:
         YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
         YC_SERVICE_ACCOUNT_ID: ${{ secrets.YC_SERVICE_ACCOUNT_ID }}
       run: |
-        # Проверяем обязательные переменные
-        if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
-          echo "ERROR: TELEGRAM_BOT_TOKEN is empty!"
-          exit 1
-        fi
-        
         ENV_VARS="TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN,PORT=8080"
         
         if [ -n "${{ secrets.ADMIN_CHAT_ID }}" ]; then
@@ -164,7 +148,6 @@ jobs:
           ENV_VARS="$ENV_VARS,DATABASE_URL=${{ secrets.DATABASE_URL }}"
         fi
         
-        # Деплоим
         yc serverless container revision deploy \
           --container-name vmkotov-test-bot \
           --image "cr.yandex/$YC_REGISTRY_ID/vmkotov-test-bot:${{ github.sha }}" \
@@ -189,13 +172,4 @@ jobs:
     steps:
       - name: Skip deployment
         run: |
-          echo "⏭️  Skipping deployment because not all required secrets are configured."
-          echo "Please add the following secrets to GitHub repository settings:"
-          echo "1. YC_IAM_KEY_JSON"
-          echo "2. YC_CLOUD_ID"
-          echo "3. YC_FOLDER_ID"
-          echo "4. YC_SERVICE_ACCOUNT_ID"
-          echo "5. YC_REGISTRY_ID"
-          echo "6. TELEGRAM_BOT_TOKEN"
-          echo ""
-          echo "Go to: Settings → Secrets and variables → Actions"
+          echo "Skipping deployment - secrets not configured"
