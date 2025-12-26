@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Полное руководство: Создание Telegram бота на Go с CI/CD на Yandex Cloud</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        h2 {
+            color: #2c3e50;
+            margin: 40px 0 20px 0;
+            padding-left: 15px;
+            border-left: 4px solid #3498db;
+        }
+        h3 {
+            color: #34495e;
+            margin: 25px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .step {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        .command {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .command code {
+            display: block;
+            white-space: pre-wrap;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-left: 4px solid #fdcb6e;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .note {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 5px;
+        }
+        .toc {
+            background: #e8f4fc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        .toc ul {
+            margin-left: 20px;
+        }
+        .toc li {
+            margin: 10px 0;
+        }
+        .file-structure {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="emoji">📚</span> Полное руководство: Создание Telegram бота на Go с CI/CD на Yandex Cloud</h1>
+        
+        <div class="toc">
+            <h2>📋 Содержание</h2>
+            <ul>
+                <li><a href="#preparation">🛠️ 1. Подготовка и настройка</a></li>
+                <li><a href="#create-bot">🤖 2. Создание бота в Telegram</a></li>
+                <li><a href="#local-dev">💻 3. Локальная разработка</a></li>
+                <li><a href="#project-structure">📁 4. Структура проекта</a></li>
+                <li><a href="#yc-setup">☁️ 5. Настройка Yandex Cloud</a></li>
+                <li><a href="#github-setup">🔧 6. Настройка GitHub Actions</a></li>
+                <li><a href="#deployment">🚀 7. Деплой и вебхуки</a></li>
+                <li><a href="#debugging">🔍 8. Отладка и мониторинг</a></li>
+                <li><a href="#templates">🎯 9. Шаблоны и лучшие практики</a></li>
+            </ul>
+        </div>
+
+        <section id="preparation">
+            <h2><span class="emoji">🛠️</span> 1. Подготовка и настройка</h2>
+            
+            <div class="step">
+                <h3>Необходимые инструменты:</h3>
+                <div class="command">
+                    <code># macOS
+brew install go
+brew install git
+brew install docker
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y golang git docker.io curl wget</code>
+                </div>
+                
+                <div class="command">
+                    <code># Установка Yandex Cloud CLI
+curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+source ~/.bashrc  # или source ~/.zshrc
+yc --version</code>
+                </div>
+            </div>
+            
+            <div class="note">
+                <strong>💡 Примечание:</strong> Если вы Windows пользователь, используйте WSL2 (Windows Subsystem for Linux) или Docker Desktop.
+            </div>
+        </section>
+
+        <section id="create-bot">
+            <h2><span class="emoji">🤖</span> 2. Создание бота в Telegram</h2>
+            
+            <div class="step">
+                <h3>Шаг 1: Создание нового бота</h3>
+                <p>Откройте Telegram и найдите <a href="https://t.me/BotFather" target="_blank">@BotFather</a></p>
+                
+                <div class="command">
+                    <code>/newbot
+→ Ваше имя бота: Мой тестовый бот
+→ Username бота: mytest_bot</code>
+                </div>
+                
+                <p><strong>СОХРАНИТЕ ТОКЕН!</strong> Он выглядит так: <code>7123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw</code></p>
+            </div>
+            
+            <div class="step">
+                <h3>Шаг 2: Настройка бота</h3>
+                <div class="command">
+                    <code>/setprivacy
+→ Выберите вашего бота
+→ Выберите "Disable" (бот видит все сообщения)
+
+/setjoingroups  
+→ Выберите вашего бота
+→ Выберите "Enable" (можно добавлять в группы)
+
+/setcommands
+→ Выберите вашего бота
+→ Введите список команд:
+start - Начать работу
+help - Помощь
+about - О боте</code>
+                </div>
+            </div>
+        </section>
+
+        <section id="local-dev">
+            <h2><span class="emoji">💻</span> 3. Локальная разработка</h2>
+            
+            <div class="step">
+                <h3>Инициализация проекта:</h3>
+                <div class="command">
+                    <code># Создайте директорию проекта
+mkdir telegram-bot-project
+cd telegram-bot-project
+
+# Инициализируйте Go модуль
+go mod init my-telegram-bot
+
+# Установите зависимости
+go get github.com/go-telegram-bot-api/telegram-bot-api/v5
+go get github.com/joho/godotenv</code>
+                </div>
+            </div>
+            
+            <div class="step">
+                <h3>Базовый main.go:</h3>
+                <div class="command">
+<code>package main
+
+import (
+    "log"
+    "net/http"
+    "os"
+    "encoding/json"
+    "io"
+    
+    tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+    "github.com/joho/godotenv"
+)
+
+func main() {
+    log.Println("🚀 Запуск бота...")
+    
+    if err := godotenv.Load(); err != nil {
+        log.Printf("⚠️ .env не найден: %v", err)
+    }
+    
+    token := os.Getenv("TELEGRAM_BOT_TOKEN")
+    if token == "" {
+        log.Fatal("❌ TELEGRAM_BOT_TOKEN не найден")
+    }
+    
+    bot, err := tgbotapi.NewBotAPI(token)
+    if err != nil {
+        log.Fatalf("❌ Ошибка создания бота: %v", err)
+    }
+    
+    log.Printf("✅ Авторизован как @%s", bot.Self.UserName)
+    
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != "POST" {
+            http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+            return
+        }
+        
+        body, _ := io.ReadAll(r.Body)
+        var update tgbotapi.Update
+        json.Unmarshal(body, &update)
+        
+        if update.Message != nil && update.Message.IsCommand() {
+            switch update.Message.Command() {
+            case "start":
+                msg := tgbotapi.NewMessage(update.Message.Chat.ID, 
+                    "👋 Привет! Я работающий бот!")
+                bot.Send(msg)
+            }
+        }
+        
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte("OK"))
+    })
+    
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    
+    log.Printf("🌐 Сервер на порту %s", port)
+    http.ListenAndServe(":"+port, nil)
+}</code>
+                </div>
+            </div>
+        </section>
+
+        <section id="project-structure">
+            <h2><span class="emoji">📁</span> 4. Структура проекта</h2>
+            
+            <div class="file-structure">
+telegram-bot-project/
+├── main.go                 # Основной код бота
+├── go.mod                  # Go зависимости
+├── go.sum                  # Go суммы зависимостей
+├── .env.example           # Пример переменных окружения
+├── .gitignore             # Git игнор файл
+├── Dockerfile.yc          # Dockerfile для Yandex Cloud
+├── deploy-yc.sh           # Скрипт деплоя на YC
+├── cloud-init.yaml        # Конфигурация cloud-init
+├── README.md              # Документация
+└── .github/workflows/     # GitHub Actions
+    └── deploy.yml         # Workflow для CI/CD
+            </div>
+            
+            <div class="step">
+                <h3>Создание базовых файлов:</h3>
+                <div class="command">
+<code># .env.example
+TELEGRAM_BOT_TOKEN=your_token_here
+PORT=8080
+DEBUG=false
+LOG_LEVEL=info</code>
+                </div>
+                
+                <div class="command">
+<code># .gitignore
+.env
+*.log
+bot
+.DS_Store
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+node_modules/
+dist/</code>
+                </div>
+            </div>
+        </section>
+
+        <section id="yc-setup">
+            <h2><span class="emoji">☁️</span> 5. Настройка Yandex Cloud</h2>
+            
+            <div class="step">
+                <h3>Шаг 1: Инициализация YC CLI</h3>
+                <div class="command">
+<code># Авторизация
+yc init
+
+# Создание сервисного аккаунта
+yc iam service-account create --name telegram-bot-sa
+
+# Получение IAM ключа
+yc iam key create --service-account-name telegram-bot-sa --output key.json</code>
+                </div>
+            </div>
+            
+            <div class="step">
+                <h3>Шаг 2: Создание реестра контейнеров</h3>
+                <div class="command">
+<code># Создание реестра
+yc container registry create --name telegram-bot-registry
+
+# Получение ID реестра
+yc container registry list</code>
+                </div>
+            </div>
+            
+            <div class="warning">
+                <strong>⚠️ ВАЖНО!</strong> Запомните следующие ID:
+                <ul>
+                    <li>YC_CLOUD_ID - <code>yc resource-manager cloud list</code></li>
+                    <li>YC_FOLDER_ID - <code>yc resource-manager folder list</code></li>
+                    <li>YC_SERVICE_ACCOUNT_ID - <code>yc iam service-account list</code></li>
+                    <li>YC_REGISTRY_ID - <code>yc container registry list</code></li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="github-setup">
+            <h2><span class="emoji">🔧</span> 6. Настройка GitHub Actions</h2>
+            
+            <div class="step">
+                <h3>Создание секретов в GitHub:</h3>
+                <ol>
+                    <li>Зайдите в репозиторий → Settings → Secrets and variables → Actions</li>
+                    <li>Добавьте секреты:
+                        <ul>
+                            <li><code>TELEGRAM_BOT_TOKEN</code> - токен вашего бота</li>
+                            <li><code>YC_IAM_KEY_JSON</code> - содержимое key.json</li>
+                            <li><code>YC_CLOUD_ID</code>, <code>YC_FOLDER_ID</code></li>
+                            <li><code>YC_SERVICE_ACCOUNT_ID</code>, <code>YC_REGISTRY_ID</code></li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+            
+            <div class="step">
+                <h3>Workflow файл (.github/workflows/deploy.yml):</h3>
+                <div class="command">
+<code>name: Deploy Telegram Bot
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile.yc'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Test build
+      run: go build -o bot . && echo "✅ Build successful"
+    
+    - name: Setup Yandex Cloud CLI
+      run: |
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i ~/.local -n
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+        sleep 2
+        yc --version
+    
+    - name: Configure Yandex Cloud
+      env:
+        YC_IAM_KEY_JSON: ${{ secrets.YC_IAM_KEY_JSON }}
+        YC_CLOUD_ID: ${{ secrets.YC_CLOUD_ID }}
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      run: |
+        echo "$YC_IAM_KEY_JSON" > /tmp/iam-key.json
+        yc config set service-account-key /tmp/iam-key.json
+        yc config set cloud-id "$YC_CLOUD_ID"
+        yc config set folder-id "$YC_FOLDER_ID"
+        echo "✅ YC CLI configured"
+    
+    - name: Build and push Docker image
+      env:
+        YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      run: |
+        # Логин в Container Registry
+        IAM_TOKEN=$(yc iam create-token)
+        echo "$IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
+        
+        # Сборка и пуш образа
+        docker build -t "cr.yandex/$YC_REGISTRY_ID/telegram-bot:latest" -f Dockerfile.yc .
+        docker push "cr.yandex/$YC_REGISTRY_ID/telegram-bot:latest"
+    
+    - name: Deploy to Yandex Cloud
+      env:
+        YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
+        YC_SERVICE_ACCOUNT_ID: ${{ secrets.YC_SERVICE_ACCOUNT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      run: |
+        # Деплой контейнера
+        yc serverless container revision deploy \
+          --container-name telegram-bot \
+          --image "cr.yandex/$YC_REGISTRY_ID/telegram-bot:latest" \
+          --cores 1 \
+          --memory 128MB \
+          --concurrency 1 \
+          --execution-timeout 300s \
+          --service-account-id "$YC_SERVICE_ACCOUNT_ID" \
+          --environment "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN" \
+          --description "Deploy from GitHub: ${{ github.sha }}"
+        
+        echo "🚀 Deployment completed!"</code>
+                </div>
+            </div>
+        </section>
+
+        <section id="deployment">
+            <h2><span class="emoji">🚀</span> 7. Деплой и вебхуки</h2>
+            
+            <div class="step">
+                <h3>Dockerfile.yc:</h3>
+                <div class="command">
+<code>FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o bot .
+
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /app/bot .
+COPY --from=builder /app/.env.example .env
+
+EXPOSE 8080
+CMD ["./bot"]</code>
+                </div>
+            </div>
+            
+            <div class="step">
+                <h3>После деплоя:</h3>
+                <div class="command">
+<code># Получите URL контейнера
+yc serverless container get --name telegram-bot --format json | jq -r '.url'
+
+# Установите вебхук
+TOKEN="your_bot_token"
+URL="https://your-container-id.containers.yandexcloud.net/"
+
+curl -X POST "https://api.telegram.org/bot$TOKEN/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "'"$URL"'", "drop_pending_updates": true}'</code>
+                </div>
+            </div>
+            
+            <div class="warning">
+                <strong>🔴 КРИТИЧЕСКИ ВАЖНО!</strong> После создания контейнера:
+                <ol>
+                    <li>Зайдите в Yandex Cloud Console</li>
+                    <li>Найдите ваш контейнер</li>
+                    <li>Создайте новую ревизию</li>
+                    <li>Включите <strong>"Публичный контейнер"</strong> и <strong>"Доступ в интернет"</strong></li>
+                </ol>
+                Без этих настроек будет ошибка <strong>403 Forbidden</strong>!
+            </div>
+        </section>
+
+        <section id="debugging">
+            <h2><span class="emoji">🔍</span> 8. Отладка и мониторинг</h2>
+            
+            <div class="step">
+                <h3>Команды для проверки:</h3>
+                <div class="command">
+<code># Проверка статуса контейнера
+yc serverless container revision list --container-name telegram-bot
+
+# Проверка вебхука
+curl -X POST "https://api.telegram.org/bot$TOKEN/getWebhookInfo"
+
+# Тестовый запрос к контейнеру
+curl -X POST "https://your-container.containers.yandexcloud.net/" \
+  -H "Content-Type: application/json" \
+  -d '{"update_id": 10000, "message": {"text": "/start", "chat": {"id": 123}}}'</code>
+                </div>
+            </div>
+            
+            <div class="step">
+                <h3>Частые ошибки и решения:</h3>
+                <table>
+                    <tr>
+                        <th>Ошибка</th>
+                        <th>Причина</th>
+                        <th>Решение</th>
+                    </tr>
+                    <tr>
+                        <td>403 Forbidden</td>
+                        <td>Контейнер не публичный</td>
+                        <td>Включить "Публичный контейнер"</td>
+                    </tr>
+                    <tr>
+                        <td>Нет ответа от бота</td>
+                        <td>Вебхук не установлен</td>
+                        <td>Установить вебхук curl-командой</td>
+                    </tr>
+                    <tr>
+                        <td>Ошибка деплоя в CI/CD</td>
+                        <td>Нет секретов GitHub</td>
+                        <td>Добавить все секреты</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <section id="templates">
+            <h2><span class="emoji">🎯</span> 9. Шаблоны и лучшие практики</h2>
+            
+            <div class="step">
+                <h3>Скрипт для быстрого создания проекта на основе шаблона:</h3>
+                <div class="command">
+<code>#!/bin/bash
+# create-bot-from-template.sh
+
+echo "🤖 Создание нового бота на основе шаблона"
+
+# 1. Клонирование вашего рабочего бота как шаблона
+read -p "📝 Введите имя нового проекта: " PROJECT_NAME
+git clone https://github.com/YOUR_USERNAME/YOUR_WORKING_BOT.git "$PROJECT_NAME"
+cd "$PROJECT_NAME"
+
+# 2. Очистка и настройка
+rm -rf .git
+git init
+
+# 3. Обновление модуля
+go mod init "$PROJECT_NAME"
+
+# 4. Обновление .env.example
+echo "TELEGRAM_BOT_TOKEN=your_token_here" > .env.example
+echo "PORT=8080" >> .env.example
+echo "DEBUG=false" >> .env.example
+
+# 5. Создание .env файла для локальной разработки
+cp .env.example .env
+
+echo ""
+echo "🎉 Проект '$PROJECT_NAME' создан!"
+echo ""
+echo "📋 Дальнейшие шаги:"
+echo "1. Отредактируйте .env файл (добавьте TELEGRAM_BOT_TOKEN)"
+echo "2. Измените main.go под свои нужды"
+echo "3. Обновите deploy.yml с новыми названиями"
+echo "4. Настройте секреты в GitHub"
+echo "5. Создайте репозиторий и запушьте код"</code>
+                </div>
+            </div>
+            
+            <div class="success">
+                <strong>✅ Итог:</strong> Теперь у вас есть полная инструкция по созданию Telegram бота с нуля, основанная на реальном опыте. Используйте эту документацию как основу для всех будущих проектов!
+            </div>
+            
+            <div class="note">
+                <strong>💡 Совет:</strong> Сохраните эту HTML-страницу как шаблон. При создании нового бота просто:
+                <ol>
+                    <li>Скопируйте рабочий проект как основу</li>
+                    <li>Обновите переменные окружения</li>
+                    <li>Настройте секреты GitHub</li>
+                    <li>Используйте эту инструкцию для отладки</li>
+                </ol>
+            </div>
+        </section>
+        
+        <div style="margin-top: 50px; padding: 20px; text-align: center; border-top: 2px solid #ecf0f1;">
+            <p>📚 Руководство создано на основе реального опыта развертывания бота <strong>vmkotov_test_bot</strong></p>
+            <p>🔄 Последнее обновление: декабрь 2024</p>
+        </div>
+    </div>
+
+    <script>
+        // Простой скрипт для копирования команд
+        document.querySelectorAll('.command').forEach(command => {
+            const copyBtn = document.createElement('button');
+            copyBtn.textContent = '📋 Копировать';
+            copyBtn.style.cssText = `
+                background: #3498db;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                cursor: pointer;
+                margin-top: 10px;
+                display: block;
+            `;
+            copyBtn.onclick = function() {
+                const code = command.querySelector('code').textContent;
+                navigator.clipboard.writeText(code).then(() => {
+                    copyBtn.textContent = '✅ Скопировано!';
+                    setTimeout(() => copyBtn.textContent = '📋 Копировать', 2000);
+                });
+            };
+            command.appendChild(copyBtn);
+        });
+    </script>
+</body>
+</html>
