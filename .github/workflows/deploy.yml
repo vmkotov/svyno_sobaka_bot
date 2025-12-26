@@ -130,7 +130,7 @@ jobs:
         YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
         YC_SERVICE_ACCOUNT_ID: ${{ secrets.YC_SERVICE_ACCOUNT_ID }}
       run: |
-        ENV_VARS="TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN,PORT=8080"
+        ENV_VARS="TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
         
         if [ -n "${{ secrets.ADMIN_CHAT_ID }}" ]; then
           ENV_VARS="$ENV_VARS,ADMIN_CHAT_ID=${{ secrets.ADMIN_CHAT_ID }}"
