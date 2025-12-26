@@ -1,4 +1,4 @@
-name: Deploy vmkotov_test_bot
+name: Deploy svyno_sobaka_bot
 
 on:
   push:
@@ -113,16 +113,16 @@ jobs:
         YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
       run: |
         docker build \
-          -t "cr.yandex/$YC_REGISTRY_ID/vmkotov-test-bot:latest" \
-          -t "cr.yandex/$YC_REGISTRY_ID/vmkotov-test-bot:${{ github.sha }}" \
+          -t "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:latest" \
+          -t "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:${{ github.sha }}" \
           -f Dockerfile.yc .
           
     - name: Push Docker image
       env:
         YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
       run: |
-        docker push "cr.yandex/$YC_REGISTRY_ID/vmkotov-test-bot:latest"
-        docker push "cr.yandex/$YC_REGISTRY_ID/vmkotov-test-bot:${{ github.sha }}"
+        docker push "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:latest"
+        docker push "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:${{ github.sha }}"
         
     - name: Deploy to Yandex Cloud
       env:
@@ -149,8 +149,8 @@ jobs:
         fi
         
         yc serverless container revision deploy \
-          --container-name vmkotov-test-bot \
-          --image "cr.yandex/$YC_REGISTRY_ID/vmkotov-test-bot:${{ github.sha }}" \
+          --container-name svyno-sobaka-bot \
+          --image "cr.yandex/$YC_REGISTRY_ID/svyno-sobaka-bot:${{ github.sha }}" \
           --cores 1 \
           --memory 128MB \
           --concurrency 1 \
@@ -163,7 +163,7 @@ jobs:
       run: |
         sleep 5
         echo "Deployment complete!"
-        yc serverless container revision list --container-name vmkotov-test-bot --limit 1
+        yc serverless container revision list --container-name svyno-sobaka-bot --limit 1
   
   skip-deploy:
     runs-on: ubuntu-latest
