@@ -2,3 +2,5 @@ github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1 h1:wG8n/XJQ07TmjbITcGi
 github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1/go.mod h1:A2S0CWkNylc2phvKXWBBdD3K0iGnDBGbzRpISP2zBl8=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
+github.com/vmkotov/telegram-forwarder v0.0.0-20251227204819-97ebd156684a h1:EwXxaecvickH8gbAMnCN4/HBpoW/Y+TcdxHNcj2ShJk=
+github.com/vmkotov/telegram-forwarder v0.0.0-20251227204819-97ebd156684a/go.mod h1:cJvMYwwUpFWD4TZOKxZosJouQFZs4BFxlA8QiYVqHVc=
