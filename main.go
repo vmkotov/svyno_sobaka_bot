@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -8,61 +10,68 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 
-	"svyno_sobaka_bot/bot"
+	mybot "svyno_sobaka_bot/mybot" // Теперь понятнее!
 )
 
 func main() {
-	// =========================================
-	// ИНИЦИАЛИЗАЦИЯ БОТА
-	// =========================================
-	log.Println("🚀 Запуск тестового бота v4 (аналог работающего)...")
+	log.Println("🚀 Запуск простого бота...")
 
-	// Загружаем переменные окружения из .env файла
-	if err := godotenv.Load(); err != nil {
-		log.Printf("⚠️ Файл .env не найден: %v", err)
-	}
+	// Загружаем настройки
+	godotenv.Load()
 
-	// Получаем токен бота из переменных окружения
+	// Создаём бота
 	token := os.Getenv("TELEGRAM_BOT_TOKEN")
-	if token == "" {
-		log.Fatal("❌ TELEGRAM_BOT_TOKEN не найден")
-	}
+	botAPI, _ := tgbotapi.NewBotAPI(token)
+	log.Printf("✅ Бот: @%s", botAPI.Self.UserName)
 
-	// Создаем экземпляр бота
-	botAPI, err := tgbotapi.NewBotAPI(token)
-	if err != nil {
-		log.Fatalf("❌ Ошибка создания бота: %v", err)
-	}
+	// Куда пересылать сообщения
+	forwardChatID := int64(-1003677836395)
 
-	// Включаем режим отладки
-	botAPI.Debug = true
-	log.Printf("✅ Авторизован как @%s", botAPI.Self.UserName)
+	// Настраиваем обработчик HTTP
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		handleRequest(w, r, botAPI, forwardChatID)
+	})
 
-	// =========================================
-	// СОЗДАЕМ ОБРАБОТЧИК С ID ЧАТА ДЛЯ ПЕРЕСЫЛКИ
-	// =========================================
-	forwardChatID := int64(-1003677836395) // ID чата для пересылки (хардкод)
-
-	// Создаем обработчик Telegram, передавая forwardChatID напрямую
-	telegramHandler := bot.NewTelegramHandler(botAPI, forwardChatID)
-	log.Printf("📍 ID чата для пересылки: %d", forwardChatID)
-
-	// =========================================
-	// НАСТРАИВАЕМ HTTP СЕРВЕР
-	// =========================================
-	http.HandleFunc("/", telegramHandler.HandleWebhook)
-
-	// Получаем порт из переменных окружения
+	// Запускаем сервер
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8081"
 	}
-
-	// Запускаем HTTP сервер
-	log.Printf("🌐 Сервер запущен на порту %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatal(err)
-	}
+	log.Printf("🌐 Сервер на порту %s", port)
+	http.ListenAndServe(":"+port, nil)
 }
 
-// Auto-deploy trigger пятница, 26 декабря 2025 г. 22:15:14 (MSK)
+// handleRequest - обрабатывает один HTTP запрос
+func handleRequest(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI, forwardChatID int64) {
+	// Только POST запросы
+	if r.Method != "POST" {
+		http.Error(w, "Нужен POST", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Читаем тело запроса
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("❌ Ошибка чтения: %v", err)
+		http.Error(w, "Ошибка чтения", http.StatusBadRequest)
+		return
+	}
+
+	// Парсим JSON от Telegram
+	var update tgbotapi.Update
+	if err := json.Unmarshal(body, &update); err != nil {
+		log.Printf("❌ Ошибка парсинга JSON: %v", err)
+		http.Error(w, "Неправильный JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Если есть сообщение - обрабатываем
+	if update.Message != nil {
+		// Вызываем функцию из нашего пакета
+		mybot.HandleMessage(bot, update.Message, forwardChatID)
+	}
+
+	// Отвечаем "OK"
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
