@@ -9,7 +9,7 @@ import (
     _ "github.com/lib/pq"
 )
 
-// SaveMessageToDB - просто сохраняет сообщение в БД
+// SaveMessageToDB - сохраняет сообщение в БД
 func SaveMessageToDB(db *sql.DB, botUsername string, msg *tgbotapi.Message) error {
     if db == nil {
         return nil // БД не настроена - пропускаем
@@ -20,14 +20,26 @@ func SaveMessageToDB(db *sql.DB, botUsername string, msg *tgbotapi.Message) erro
         INSERT INTO main.messages_log (
             created_at, bot_id, user_id, message_id, chat_id,
             bot_username, message_text, user_name, user_username,
-            has_sticker, has_photo, has_document
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            has_sticker, has_photo, has_document, chat_title
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     `
     
     // Определяем наличие медиа
     hasSticker := msg.Sticker != nil
     hasPhoto := msg.Photo != nil && len(msg.Photo) > 0
     hasDocument := msg.Document != nil
+    
+    // Получаем chat_title (может быть пустым в личных сообщениях)
+    chatTitle := ""
+    if msg.Chat.Title != "" {
+        chatTitle = msg.Chat.Title
+    } else if msg.Chat.UserName != "" {
+        // Для личных сообщений используем username
+        chatTitle = "@" + msg.Chat.UserName
+    } else {
+        // Или first_name для приватных чатов
+        chatTitle = msg.Chat.FirstName
+    }
     
     _, err := db.Exec(query,
         time.Now(),                 // created_at
@@ -42,6 +54,7 @@ func SaveMessageToDB(db *sql.DB, botUsername string, msg *tgbotapi.Message) erro
         hasSticker,                 // has_sticker
         hasPhoto,                   // has_photo
         hasDocument,                // has_document
+        chatTitle,                  // chat_title - НОВОЕ ПОЛЕ!
     )
     
     if err != nil {
@@ -49,6 +62,6 @@ func SaveMessageToDB(db *sql.DB, botUsername string, msg *tgbotapi.Message) erro
         return err
     }
     
-    log.Printf("💾 Сообщение сохранено в БД")
+    log.Printf("💾 Сообщение сохранено в БД (чат: %s)", chatTitle)
     return nil
 }
