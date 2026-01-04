@@ -7,4 +7,4 @@ require (
 	github.com/joho/godotenv v1.5.1
 )
 
-require github.com/vmkotov/telegram-forwarder v0.0.0-20251227204819-97ebd156684a // indirect
+require github.com/vmkotov/telegram-forwarder v0.0.0-20260104212426-2c90f7f47b29 // indirect

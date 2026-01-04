@@ -6,7 +6,6 @@ import (
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	forwarder "github.com/vmkotov/telegram-forwarder"
 	"github.com/joho/godotenv"
 
 	"svyno_sobaka_bot/bot"
@@ -40,14 +39,13 @@ func main() {
 	log.Printf("✅ Авторизован как @%s", botAPI.Self.UserName)
 
 	// =========================================
-	// СОЗДАЕМ FORWARDER ИЗ ВНЕШНЕЙ БИБЛИОТЕКИ
+	// СОЗДАЕМ ОБРАБОТЧИК С ID ЧАТА ДЛЯ ПЕРЕСЫЛКИ
 	// =========================================
 	forwardChatID := int64(-1003677836395) // ID чата для пересылки (хардкод)
-	fwd := forwarder.New(botAPI, forwardChatID)
-	log.Printf("📍 ID чата для пересылки: %d", forwardChatID)
 
-	// Создаем обработчик Telegram с forwarder
-	telegramHandler := bot.NewTelegramHandler(botAPI, fwd)
+	// Создаем обработчик Telegram, передавая forwardChatID напрямую
+	telegramHandler := bot.NewTelegramHandler(botAPI, forwardChatID)
+	log.Printf("📍 ID чата для пересылки: %d", forwardChatID)
 
 	// =========================================
 	// НАСТРАИВАЕМ HTTP СЕРВЕР
@@ -66,4 +64,5 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
 // Auto-deploy trigger пятница, 26 декабря 2025 г. 22:15:14 (MSK)
