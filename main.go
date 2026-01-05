@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-    log.Println("🚀 Запуск бота с БД...")
+    log.Println("🚀 Запуск бота с БД и рассылкой...")
     godotenv.Load()
     
     // 1. Бот
@@ -41,26 +41,47 @@ func main() {
             log.Printf("⚠️ Не удалось подключиться к БД: %v", err)
             db = nil
         } else {
-            defer db.Close()
-            log.Println("✅ Подключено к PostgreSQL")
+            // Проверяем подключение
+            if err := db.Ping(); err != nil {
+                log.Printf("⚠️ БД недоступна: %v", err)
+                db = nil
+            } else {
+                defer db.Close()
+                log.Println("✅ Подключено к PostgreSQL")
+            }
         }
     }
     
     // 3. ID для пересылки
     forwardChatID := int64(-1003677836395)
     
-    // 4. Обработчик HTTP
+    // 4. Секретный ключ для рассылки
+    broadcastSecret := os.Getenv("BROADCAST_SECRET")
+    if broadcastSecret == "" {
+        broadcastSecret = "change-me-in-production"
+        log.Println("⚠️ Используется дефолтный BROADCAST_SECRET")
+    }
+    
+    // 5. Настраиваем HTTP обработчики
+    // Основной вебхук от Telegram
     http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
         handleWebhook(w, r, bot, forwardChatID, db)
     })
     
-    // 5. Запуск сервера
+    // Эндпоинт для рассылки
+    broadcastHandler := mybot.SetupBroadcastHandler(bot, db, broadcastSecret)
+    http.HandleFunc("/admin/broadcast", broadcastHandler)
+    
+    // 6. Стартуем сервер
     port := os.Getenv("PORT")
     if port == "" {
         port = "8081"
     }
     
-    log.Printf("🌐 Сервер на порту %s", port)
+    log.Printf("🌐 Сервер запущен на порту %s", port)
+    log.Printf("📢 Эндпоинт рассылки: http://localhost:%s/admin/broadcast", port)
+    log.Println("📝 Заголовок: X-Broadcast-Secret: " + broadcastSecret)
+    
     if err := http.ListenAndServe(":"+port, nil); err != nil {
         log.Fatal(err)
     }
