@@ -47,7 +47,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 
 	// 1. Проверяем доступность процедуры
 	log.Println("🔄 Проверяем процедуру БД...")
-	
+
 	// Вызываем процедуру
 	log.Println("🔄 Вызываем процедуру proc_svyno_sobaka_of_the_day...")
 	_, err := db.Exec(`CALL svyno_sobaka_bot.proc_svyno_sobaka_of_the_day()`)
@@ -65,13 +65,13 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 		return err
 	}
 	defer checkRows.Close()
-	
+
 	var count int
 	if checkRows.Next() {
 		checkRows.Scan(&count)
 	}
 	log.Printf("📊 В таблице svyno_sobaka_of_the_day сегодня: %d записей", count)
-	
+
 	if count == 0 {
 		log.Println("⚠️ Таблица пустая, рассылать нечего")
 		return nil
@@ -129,15 +129,14 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 		}
 
 		// Пауза 3 секунды
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		// 2. Второе сообщение
 		msg2 := tgbotapi.NewMessage(chatID,
 			"🎉 *СВИНОСОБАКА ДНЯ*\n\n"+
 				"Сегодня свинособака – это *"+finalDisplayName+"*\n\n"+
 				"Поздравляем с этим почётным званием! 🐷🐶\n"+
-				"Не забывайте быть активными в чате!\n\n"+
-				"А пока иди нахуй! 🎊")
+				"Это безусловно успех 🎊")
 		msg2.ParseMode = "Markdown"
 
 		if _, err := bot.Send(msg2); err != nil {
