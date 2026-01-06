@@ -45,17 +45,40 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 
 	log.Println("📢 Начинаю рассылку свинособаки дня...")
 
-	// 1. Сначала вызываем процедуру для заполнения таблицы
-	log.Println("🔄 Вызываем процедуру выбора свинособаки дня...")
+	// 1. Проверяем доступность процедуры
+	log.Println("🔄 Проверяем процедуру БД...")
+	
+	// Вызываем процедуру
+	log.Println("🔄 Вызываем процедуру proc_svyno_sobaka_of_the_day...")
 	_, err := db.Exec(`CALL svyno_sobaka_bot.proc_svyno_sobaka_of_the_day()`)
 	if err != nil {
 		log.Printf("❌ Ошибка вызова процедуры: %v", err)
-		return err
+		// Продолжаем, может таблица уже заполнена
+	} else {
+		log.Println("✅ Процедура выполнена успешно")
 	}
 
-	log.Println("✅ Таблица заполнена, начинаю рассылку...")
+	// 2. Проверяем что есть в таблице
+	checkRows, err := db.Query(`SELECT COUNT(*) FROM svyno_sobaka_bot.svyno_sobaka_of_the_day WHERE dt_insert::date = CURRENT_DATE`)
+	if err != nil {
+		log.Printf("❌ Ошибка проверки таблицы: %v", err)
+		return err
+	}
+	defer checkRows.Close()
+	
+	var count int
+	if checkRows.Next() {
+		checkRows.Scan(&count)
+	}
+	log.Printf("📊 В таблице svyno_sobaka_of_the_day сегодня: %d записей", count)
+	
+	if count == 0 {
+		log.Println("⚠️ Таблица пустая, рассылать нечего")
+		return nil
+	}
 
-	// 2. Берём сегодняшние записи из таблицы svyno_sobaka_of_the_day
+	// 3. Берём сегодняшние записи
+	log.Println("📋 Запрашиваем данные для рассылки...")
 	rows, err := db.Query(`
         SELECT 
             ss.chat_id,
@@ -63,9 +86,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
             ss.user_name,
             ss.user_username
         FROM svyno_sobaka_bot.svyno_sobaka_of_the_day ss
-        WHERE 1=1
-            AND ss.dt_insert::date = CURRENT_DATE
-            AND (ss.user_username IS NOT NULL OR ss.user_name IS NOT NULL)
+        WHERE ss.dt_insert::date = CURRENT_DATE
         ORDER BY ss.chat_id
     `)
 
@@ -75,7 +96,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 	}
 	defer rows.Close()
 
-	// 3. Рассылаем по каждому чату
+	// 4. Рассылаем по каждому чату
 	sentCount := 0
 	for rows.Next() {
 		var chatID int64
@@ -85,6 +106,8 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 			log.Printf("⚠️ Ошибка чтения данных: %v", err)
 			continue
 		}
+
+		log.Printf("💬 Обрабатываю чат %d: %s", chatID, displayName.String)
 
 		// Определяем как показывать имя
 		var finalDisplayName string
@@ -96,7 +119,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 			finalDisplayName = "Анонимный пользователь"
 		}
 
-		// 1. Первое сообщение - "Идёт сканирование..."
+		// 1. Первое сообщение
 		msg1 := tgbotapi.NewMessage(chatID, "🔍 *Идёт сканирование пользователей чата на наличие свинособаки*")
 		msg1.ParseMode = "Markdown"
 
@@ -106,9 +129,9 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 		}
 
 		// Пауза 3 секунды
-		time.Sleep(10 * time.Second)
+		time.Sleep(3 * time.Second)
 
-		// 2. Второе сообщение - результат
+		// 2. Второе сообщение
 		msg2 := tgbotapi.NewMessage(chatID,
 			"🎉 *СВИНОСОБАКА ДНЯ*\n\n"+
 				"Сегодня свинособака – это *"+finalDisplayName+"*\n\n"+
@@ -123,11 +146,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 		}
 
 		sentCount++
-
-		// Логируем прогресс
-		if sentCount%10 == 0 {
-			log.Printf("📤 Отправлено %d сообщений", sentCount)
-		}
+		log.Printf("✅ Отправлено в чат %d: %s", chatID, finalDisplayName)
 
 		// Пауза между чатами
 		time.Sleep(500 * time.Millisecond)
@@ -141,7 +160,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 	return nil
 }
 
-// isAuthorized проверяет авторизацию (остаётся без изменений)
+// isAuthorized проверяет авторизацию
 func isAuthorized(r *http.Request, secretKey string) bool {
 	// 1. Разрешаем локальные запросы
 	if strings.HasPrefix(r.RemoteAddr, "127.0.0.1") ||
