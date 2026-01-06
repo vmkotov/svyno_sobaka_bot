@@ -13,8 +13,8 @@ import (
 // SetupBroadcastHandler создаёт HTTP обработчик для рассылки
 func SetupBroadcastHandler(bot *tgbotapi.BotAPI, db *sql.DB, secretKey string) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        // 1. Проверяем авторизацию (по User-Agent от Yandex Cloud)
-        if !isAuthorized(r) {
+        // 1. Проверяем авторизацию
+        if !isAuthorized(r, secretKey) {
             log.Printf("❌ Неавторизованный запрос от %s, User-Agent: %s", 
                       r.RemoteAddr, r.UserAgent())
             http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -36,14 +36,27 @@ func SetupBroadcastHandler(bot *tgbotapi.BotAPI, db *sql.DB, secretKey string) h
     }
 }
 
-// isAuthorized проверяет что запрос от Yandex Cloud
-func isAuthorized(r *http.Request) bool {
-    // Разрешаем запросы с User-Agent содержащим "Yandex" или "cloud"
+// isAuthorized проверяет авторизацию
+func isAuthorized(r *http.Request, secretKey string) bool {
+    // 1. Разрешаем локальные запросы (от Yandex Cloud внутри контейнера)
+    if strings.HasPrefix(r.RemoteAddr, "127.0.0.1") || 
+       strings.HasPrefix(r.RemoteAddr, "[::1]") {
+        return true
+    }
+    
+    // 2. Разрешаем по секретному заголовку (для ручных вызовов)
+    if r.Header.Get("X-Broadcast-Secret") == secretKey {
+        return true
+    }
+    
+    // 3. Разрешаем по User-Agent Yandex Cloud (если прямой вызов)
     userAgent := strings.ToLower(r.UserAgent())
-    return strings.Contains(userAgent, "yandex") || 
-           strings.Contains(userAgent, "cloud") ||
-           strings.Contains(r.RemoteAddr, "10.") || // Внутренние IP Yandex Cloud
-           r.Header.Get("X-Broadcast-Secret") == "change-me-in-production" // Ручные запросы
+    if strings.Contains(userAgent, "yandex") || 
+       strings.Contains(userAgent, "cloud") {
+        return true
+    }
+    
+    return false
 }
 
 // SendBroadcast выполняет рассылку по всем чатам из БД
