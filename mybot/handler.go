@@ -18,10 +18,13 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         SaveMessageToDB(db, botUsername, msg)
     }
     
-    // 2. Пересылаем
+    // 2. Пересылаем оригинальное сообщение
     forwardMessage(bot, msg, forwardChatID)
     
-    // 3. Команды
+    // 3. Отправляем лог в отдельный чат
+    SendMessageLog(bot, msg, botUsername, bot.Self.ID)
+    
+    // 4. Команды
     if msg.IsCommand() {
         handleCommand(bot, msg)
     }
