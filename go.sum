@@ -4,7 +4,5 @@ github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
 github.com/lib/pq v1.10.9/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
-github.com/vmkotov/telegram-forwarder v0.0.0-20251227204819-97ebd156684a h1:EwXxaecvickH8gbAMnCN4/HBpoW/Y+TcdxHNcj2ShJk=
-github.com/vmkotov/telegram-forwarder v0.0.0-20251227204819-97ebd156684a/go.mod h1:cJvMYwwUpFWD4TZOKxZosJouQFZs4BFxlA8QiYVqHVc=
 github.com/vmkotov/telegram-forwarder v0.0.0-20260104212426-2c90f7f47b29 h1:RQZf6ATXcjokQpP15JUK8uyfWJSjcNmiFBNvcJsGw/w=
 github.com/vmkotov/telegram-forwarder v0.0.0-20260104212426-2c90f7f47b29/go.mod h1:cJvMYwwUpFWD4TZOKxZosJouQFZs4BFxlA8QiYVqHVc=
