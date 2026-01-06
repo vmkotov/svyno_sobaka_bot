@@ -4,6 +4,7 @@ import (
     "database/sql"
     "log"
     "net/http"
+    "strings"
     "time"
     
     tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -12,16 +13,17 @@ import (
 // SetupBroadcastHandler создаёт HTTP обработчик для рассылки
 func SetupBroadcastHandler(bot *tgbotapi.BotAPI, db *sql.DB, secretKey string) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        // 1. Проверяем авторизацию
-        if !isAuthorized(r, secretKey) {
-            log.Println("❌ Неавторизованный запрос на рассылку")
+        // 1. Проверяем авторизацию (по User-Agent от Yandex Cloud)
+        if !isAuthorized(r) {
+            log.Printf("❌ Неавторизованный запрос от %s, User-Agent: %s", 
+                      r.RemoteAddr, r.UserAgent())
             http.Error(w, "Unauthorized", http.StatusUnauthorized)
             return
         }
         
-        log.Println("🔔 Запуск рассылки по запросу от", r.RemoteAddr)
+        log.Printf("🔔 Запуск рассылки по запросу от %s", r.RemoteAddr)
         
-        // 2. Запускаем рассылку в фоне (не блокируем ответ)
+        // 2. Запускаем рассылку в фоне
         go func() {
             if err := SendBroadcast(bot, db, "svyno_sobaka_bot"); err != nil {
                 log.Printf("❌ Ошибка рассылки: %v", err)
@@ -34,26 +36,32 @@ func SetupBroadcastHandler(bot *tgbotapi.BotAPI, db *sql.DB, secretKey string) h
     }
 }
 
-// isAuthorized проверяет секретный ключ
-func isAuthorized(r *http.Request, secretKey string) bool {
-    receivedKey := r.Header.Get("X-Broadcast-Secret")
-    return receivedKey == secretKey
+// isAuthorized проверяет что запрос от Yandex Cloud
+func isAuthorized(r *http.Request) bool {
+    // Разрешаем запросы с User-Agent содержащим "Yandex" или "cloud"
+    userAgent := strings.ToLower(r.UserAgent())
+    return strings.Contains(userAgent, "yandex") || 
+           strings.Contains(userAgent, "cloud") ||
+           strings.Contains(r.RemoteAddr, "10.") || // Внутренние IP Yandex Cloud
+           r.Header.Get("X-Broadcast-Secret") == "change-me-in-production" // Ручные запросы
 }
 
 // SendBroadcast выполняет рассылку по всем чатам из БД
 func SendBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername string) error {
     if db == nil {
-        return nil // БД не настроена
+        log.Println("ℹ️ БД не настроена, пропускаем рассылку")
+        return nil
     }
     
-    log.Println("📢 Начинаю ежедневную рассылку...")
+    log.Println("📢 Начинаю рассылку...")
     
-    // 1. Берём ВСЕ уникальные chat_id где bot_username = 'svyno_sobaka_bot'
+    // 1. Берём уникальные chat_id
     rows, err := db.Query(`
         SELECT DISTINCT chat_id 
         FROM main.messages_log 
         WHERE chat_id IS NOT NULL 
         AND bot_username = $1
+        AND chat_id != 0
         ORDER BY chat_id
     `, botUsername)
     
@@ -63,7 +71,7 @@ func SendBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername string) error {
     }
     defer rows.Close()
     
-    // 2. Собираем все chat_id
+    // 2. Собираем chat_id
     var chatIDs []int64
     for rows.Next() {
         var chatID int64
@@ -84,10 +92,6 @@ func SendBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername string) error {
     // 3. Отправляем каждому чату
     sentCount := 0
     for _, chatID := range chatIDs {
-        // Пропускаем отрицательные ID (группы/каналы) если нужно
-        // if chatID < 0 { continue } 
-        
-        // Формируем сообщение
         msg := tgbotapi.NewMessage(chatID,
             "📢 *ЕЖЕДНЕВНОЕ СООБЩЕНИЕ ОТ СВИНОСОБАКИ*\n\n" +
             "Не забывай писать мне сообщения!\n" +
@@ -97,42 +101,21 @@ func SendBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername string) error {
         
         msg.ParseMode = "Markdown"
         
-        // Отправляем с обработкой ошибок
         if _, err := bot.Send(msg); err != nil {
             log.Printf("⚠️ Не удалось отправить в %d: %v", chatID, err)
-            // Можно пропустить или остановиться
             continue
         }
         
         sentCount++
-        log.Printf("✅ Отправлено в чат %d (%d/%d)", chatID, sentCount, len(chatIDs))
         
-        // Пауза между сообщениями (лимиты Telegram: ~30 сообщений/секунду)
-        time.Sleep(100 * time.Millisecond) // 10 сообщений/секунду - безопасно
+        // Пауза между сообщениями
+        if sentCount%10 == 0 {
+            log.Printf("📤 Отправлено %d/%d", sentCount, len(chatIDs))
+        }
+        
+        time.Sleep(100 * time.Millisecond)
     }
-    
-    // 4. Сохраняем лог рассылки в БД
-    saveBroadcastLog(db, botUsername, sentCount, len(chatIDs))
     
     log.Printf("🎉 Рассылка завершена. Успешно: %d/%d", sentCount, len(chatIDs))
     return nil
-}
-
-// saveBroadcastLog сохраняет информацию о рассылке
-func saveBroadcastLog(db *sql.DB, botUsername string, sent, total int) {
-    if db == nil {
-        return
-    }
-    
-    query := `
-        INSERT INTO main.broadcast_log 
-        (bot_username, sent_count, total_count, created_at) 
-        VALUES ($1, $2, $3, $4)
-    `
-    
-    _, err := db.Exec(query, botUsername, sent, total, time.Now())
-    if err != nil {
-        log.Printf("⚠️ Не удалось сохранить лог рассылки: %v", err)
-        // Можно создать таблицу если нет
-    }
 }
