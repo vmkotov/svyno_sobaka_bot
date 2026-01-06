@@ -28,4 +28,9 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
     if msg.IsCommand() {
         handleCommand(bot, msg)
     }
+    
+    // 5. Проверка триггерных слов "Свинособака"
+    // ID чата для логов (фиксированный, такой же как в message_logger.go)
+    logChatID := int64(-1003516004835)
+    CheckSvinoSobakaTriggers(bot, msg, logChatID)
 }

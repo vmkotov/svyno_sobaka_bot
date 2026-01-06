@@ -143,14 +143,3 @@ func getValueOrDefault(value, defaultValue string) string {
     }
     return value
 }
-
-// escapeMarkdown экранирует символы Markdown
-func escapeMarkdown(text string) string {
-    // Экранируем специальные символы Markdown
-    specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
-    result := text
-    for _, char := range specialChars {
-        result = strings.ReplaceAll(result, char, "\\"+char)
-    }
-    return result
-}

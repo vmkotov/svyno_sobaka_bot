@@ -106,7 +106,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB, botUsername stri
 		}
 
 		// Пауза 3 секунды
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		// 2. Второе сообщение - результат
 		msg2 := tgbotapi.NewMessage(chatID,
