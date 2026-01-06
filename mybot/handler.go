@@ -30,7 +30,9 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
     }
     
     // 5. Проверка триггерных слов "Свинособака"
-    // ID чата для логов (фиксированный, такой же как в message_logger.go)
     logChatID := int64(-1003516004835)
     CheckSvinoSobakaTriggers(bot, msg, logChatID)
+    
+    // 6. Проверка триггерных слов "Спартак"
+    CheckSpartakTriggers(bot, msg, logChatID)
 }
