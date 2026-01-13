@@ -12,6 +12,18 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// Константы для рассылки (вынесены в начало файла для удобства)
+const (
+	// Фразы для рассылки свинособаки дня
+	broadcastPhrase1 = "Поздравляем с этим почётным званием! 🐷🐶"
+	broadcastPhrase2 = "Это безусловно успех 🎊"
+
+	// Настройки параллелизма
+	broadcastMaxWorkers     = 5
+	broadcastStartDelay     = 800 * time.Millisecond
+	broadcastGoroutineDelay = 50 * time.Millisecond
+)
+
 // SetupBroadcastHandler создаёт HTTP обработчик для рассылки
 func SetupBroadcastHandler(bot *tgbotapi.BotAPI, db *sql.DB, secretKey string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -46,13 +58,16 @@ func processChat(bot *tgbotapi.BotAPI, chatID int64, finalName string, wg *sync.
 		"первое сообщение рассылки")
 
 	// Короткая пауза для эффекта
-	time.Sleep(800 * time.Millisecond)
+	time.Sleep(broadcastStartDelay)
 
-	// 2. Второе сообщение
+	// 2. Второе сообщение - используем вынесенные константы
 	msgText := fmt.Sprintf("🎉 СВИНОСОБАКА ДНЯ\n\n"+
-		"Сегодня свинособака – это *%s*\n\n"+
-		"Поздравляем с этим почётным званием! 🐷🐶\n"+
-		"Это безусловно успех 🎊", finalName)
+		"Сегодня свинособака – это %s\n\n"+
+		"%s\n"+
+		"%s",
+		finalName,
+		broadcastPhrase1,
+		broadcastPhrase2)
 
 	sendMessage(bot, chatID, msgText, "второе сообщение рассылки")
 
@@ -160,8 +175,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
 	log.Printf("📍 Всего чатов для рассылки: %d", len(tasks))
 
 	// ПАРАЛЛЕЛЬНАЯ ОБРАБОТКА с семафором
-	maxWorkers := 5 // Ограничиваем параллелизм чтобы не превысить лимиты Telegram
-	semaphore := make(chan struct{}, maxWorkers)
+	semaphore := make(chan struct{}, broadcastMaxWorkers)
 	var wg sync.WaitGroup
 	results := make(chan string, len(tasks))
 
@@ -182,7 +196,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
 		}(task.ChatID, task.FinalName)
 
 		// Минимальная задержка между запусками горутин
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(broadcastGoroutineDelay)
 	}
 
 	// Ждём завершения всех горутин
@@ -213,10 +227,10 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
 	log.Printf("   Успешно отправлено: %d", successCount)
 	log.Printf("   Не удалось отправить: %d", failCount)
 
-	// Рассчитываем примерное время для 100 чатов (ИСПРАВЛЕННАЯ СТРОКА)
+	// Рассчитываем примерное время для 100 чатов
 	if len(tasks) > 0 {
 		timePerChat := duration / time.Duration(len(tasks))
-		estimated100 := timePerChat * 100 / time.Duration(maxWorkers) // Исправлено
+		estimated100 := timePerChat * 100 / time.Duration(broadcastMaxWorkers)
 		log.Printf("⏱️  Примерное время для 100 чатов: %v", estimated100)
 	}
 
