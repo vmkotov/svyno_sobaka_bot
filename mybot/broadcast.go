@@ -50,8 +50,27 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         log.Println("✅ Процедура выполнена")
     }
     
-    // 🟢 2. ВКЛЮЧЕНИЕ БД - запрос данных
+    // 🟢 2. ВКЛЮЧЕНИЕ БД - запрос данных с подсчётом
     log.Println("📋 Запрашиваем данные...")
+    
+    // Сначала посчитаем сколько записей за сегодня
+    var totalRecords int
+    countQuery := `SELECT COUNT(*) FROM svyno_sobaka_bot.svyno_sobaka_of_the_day WHERE dt_date_only = CURRENT_DATE`
+    err = db.QueryRow(countQuery).Scan(&totalRecords)
+    if err != nil {
+        log.Printf("⚠️ Не удалось подсчитать записи: %v", err)
+        totalRecords = 0
+    }
+    
+    log.Printf("📊 В таблице svyno_sobaka_of_the_day найдено %d записей за сегодня", totalRecords)
+    
+    // Если нет записей - завершаем
+    if totalRecords == 0 {
+        log.Println("ℹ️ Нет записей для рассылки, завершаю работу")
+        return nil
+    }
+    
+    // Запрашиваем детальные данные
     rows, err := db.Query(`
         SELECT 
             chat_id,
@@ -59,12 +78,12 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
             user_name,
             user_username
         FROM svyno_sobaka_bot.svyno_sobaka_of_the_day 
-        WHERE dt_insert::date = CURRENT_DATE
+        WHERE dt_date_only = CURRENT_DATE
         ORDER BY chat_id
     `)
     
     if err != nil {
-        log.Printf("❌ Ошибка запроса: %v", err)
+        log.Printf("❌ Ошибка запроса данных: %v", err)
         return err
     }
     
@@ -73,14 +92,38 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     log.Println("✅ Данные получены, БД можно закрывать")
     
     // Теперь работаем только с данными в памяти
-    
     sentCount := 0
+    failedCount := 0
+    chatIDs := make([]int64, 0)
+    
+    // Сначала соберём все chat_id для логирования
+    tempRows, err := db.Query(`
+        SELECT chat_id 
+        FROM svyno_sobaka_bot.svyno_sobaka_of_the_day 
+        WHERE dt_date_only = CURRENT_DATE
+        ORDER BY chat_id
+    `)
+    if err == nil {
+        defer tempRows.Close()
+        for tempRows.Next() {
+            var chatID int64
+            if err := tempRows.Scan(&chatID); err == nil {
+                chatIDs = append(chatIDs, chatID)
+                log.Printf("📍 Начинаю рассылку в чат %d", chatID)
+            }
+        }
+    }
+    
+    log.Printf("📍 Всего чатов для рассылки: %d", len(chatIDs))
+    
+    // Теперь обрабатываем основную выборку
     for rows.Next() {
         var chatID int64
         var displayName, userName, userUsername sql.NullString
         
         if err := rows.Scan(&chatID, &displayName, &userName, &userUsername); err != nil {
-            log.Printf("⚠️ Ошибка чтения: %v", err)
+            log.Printf("⚠️ Ошибка чтения данных для чата: %v", err)
+            failedCount++
             continue
         }
         
@@ -94,7 +137,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
             finalName = "Аноним"
         }
         
-        log.Printf("💬 Чат %d: %s", chatID, finalName)
+        log.Printf("💬 Чат %d: выбрана свинособака %s", chatID, finalName)
         
         // 1. Первое сообщение
         msg1 := tgbotapi.NewMessage(chatID, "🔍 *Идёт сканирование пользователей чата на наличие свинособаки*")
@@ -102,10 +145,11 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         
         if _, err := bot.Send(msg1); err != nil {
             log.Printf("⚠️ Не отправилось 1-е сообщение в %d: %v", chatID, err)
+            failedCount++
             continue
         }
         
-        // Пауза
+        // Пауза для эффекта
         time.Sleep(3 * time.Second)
         
         // 2. Второе сообщение
@@ -118,11 +162,12 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         
         if _, err := bot.Send(msg2); err != nil {
             log.Printf("⚠️ Не отправилось 2-е сообщение в %d: %v", chatID, err)
+            failedCount++
             continue
         }
         
         sentCount++
-        log.Printf("✅ Отправлено в чат %d", chatID)
+        log.Printf("✅ Успешно отправлено в чат %d", chatID)
         
         // Пауза между чатами
         time.Sleep(500 * time.Millisecond)
@@ -130,12 +175,21 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     
     // 🔴 4. ВЫКЛЮЧЕНИЕ БД - проверка ошибок
     if err := rows.Err(); err != nil {
-        log.Printf("⚠️ Ошибка rows: %v", err)
+        log.Printf("⚠️ Ошибка при итерации rows: %v", err)
     }
     
-    // 🔴 5. ВЫКЛЮЧЕНИЕ БД - rows закрываются через defer
+    log.Printf("🎉 Рассылка завершена. Статистика:")
+    log.Printf("   Всего записей в таблице: %d", totalRecords)
+    log.Printf("   Чатов для рассылки: %d", len(chatIDs))
+    log.Printf("   Успешно отправлено: %d", sentCount)
+    log.Printf("   Не удалось отправить: %d", failedCount)
     
-    log.Printf("🎉 Рассылка завершена. Отправлено: %d", sentCount)
+    // Проверяем несоответствие
+    if sentCount+failedCount != len(chatIDs) {
+        log.Printf("⚠️ Внимание: несоответствие в количестве! sent(%d) + failed(%d) != chats(%d)", 
+            sentCount, failedCount, len(chatIDs))
+    }
+    
     return nil
 }
 
