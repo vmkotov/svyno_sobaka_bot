@@ -2,9 +2,11 @@ package mybot
 
 import (
     "database/sql"
+    "fmt"
     "log"
     "net/http"
     "strings"
+    "sync"
     "time"
     
     tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -32,6 +34,31 @@ func SetupBroadcastHandler(bot *tgbotapi.BotAPI, db *sql.DB, secretKey string) h
     }
 }
 
+// Обработка одного чата с использованием существующей sendMessage из messages.go
+func processChat(bot *tgbotapi.BotAPI, chatID int64, finalName string, wg *sync.WaitGroup, results chan<- string) {
+    defer wg.Done()
+    
+    chatLog := fmt.Sprintf("Чат %d", chatID)
+    
+    // 1. Первое сообщение - используем существующую sendMessage
+    sendMessage(bot, chatID, 
+        "🔍 *Идёт сканирование пользователей чата на наличие свинособаки*", 
+        "первое сообщение рассылки")
+    
+    // Короткая пауза для эффекта
+    time.Sleep(800 * time.Millisecond)
+    
+    // 2. Второе сообщение
+    msgText := fmt.Sprintf("🎉 *СВИНОСОБАКА ДНЯ*\n\n"+
+        "Сегодня свинособака – это *%s*\n\n"+
+        "Поздравляем с этим почётным званием! 🐷🐶\n"+
+        "Это безусловно успех 🎊", finalName)
+    
+    sendMessage(bot, chatID, msgText, "второе сообщение рассылки")
+    
+    results <- fmt.Sprintf("✅ %s: успешно отправлено", chatLog)
+}
+
 // SendSvynoSobakaBroadcast выполняет рассылку с выбором свинособаки дня
 func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     if db == nil {
@@ -50,10 +77,9 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         log.Println("✅ Процедура выполнена")
     }
     
-    // 🟢 2. ВКЛЮЧЕНИЕ БД - запрос данных с подсчётом
+    // 🟢 2. ВКЛЮЧЕНИЕ БД - запрос данных
     log.Println("📋 Запрашиваем данные...")
     
-    // УНИФИЦИРУЕМ условия WHERE - используем dt_date_only везде
     // Сначала посчитаем сколько записей за сегодня
     var totalRecords int
     countQuery := `SELECT COUNT(*) FROM svyno_sobaka_bot.svyno_sobaka_of_the_day WHERE dt_date_only = CURRENT_DATE`
@@ -71,21 +97,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         return nil
     }
     
-    // ДОПОЛНИТЕЛЬНАЯ ДИАГНОСТИКА: выведем все chat_id которые есть по этому условию
-    var debugChatIDs []int64
-    debugRows, err := db.Query(`SELECT chat_id FROM svyno_sobaka_bot.svyno_sobaka_of_the_day WHERE dt_date_only = CURRENT_DATE ORDER BY chat_id`)
-    if err == nil {
-        defer debugRows.Close()
-        for debugRows.Next() {
-            var debugChatID int64
-            if err := debugRows.Scan(&debugChatID); err == nil {
-                debugChatIDs = append(debugChatIDs, debugChatID)
-            }
-        }
-        log.Printf("🔍 Диагностика: по условию dt_date_only = CURRENT_DATE найдены чаты: %v", debugChatIDs)
-    }
-    
-    // Запрашиваем детальные данные с ТЕМ ЖЕ условием
+    // Запрашиваем детальные данные
     rows, err := db.Query(`
         SELECT 
             chat_id,
@@ -93,7 +105,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
             user_name,
             user_username
         FROM svyno_sobaka_bot.svyno_sobaka_of_the_day 
-        WHERE dt_date_only = CURRENT_DATE  -- ИСПРАВЛЕНО: используем dt_date_only
+        WHERE dt_date_only = CURRENT_DATE
         ORDER BY chat_id
     `)
     
@@ -106,48 +118,23 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     defer rows.Close()
     log.Println("✅ Данные получены, БД можно закрывать")
     
-    // Теперь работаем только с данными в памяти
-    sentCount := 0
-    failedCount := 0
-    chatIDs := make([]int64, 0)
-    
-    // Сначала соберём все chat_id для логирования (с тем же условием!)
-    tempRows, err := db.Query(`
-        SELECT chat_id 
-        FROM svyno_sobaka_bot.svyno_sobaka_of_the_day 
-        WHERE dt_date_only = CURRENT_DATE
-        ORDER BY chat_id
-    `)
-    if err == nil {
-        defer tempRows.Close()
-        for tempRows.Next() {
-            var chatID int64
-            if err := tempRows.Scan(&chatID); err == nil {
-                chatIDs = append(chatIDs, chatID)
-                log.Printf("📍 Начинаю рассылку в чат %d", chatID)
-            }
-        }
+    // Подготовка данных для параллельной обработки
+    type ChatTask struct {
+        ChatID    int64
+        FinalName string
     }
     
-    log.Printf("📍 Всего чатов для рассылки: %d", len(chatIDs))
+    var tasks []ChatTask
+    chatIDs := []int64{}
     
-    // Теперь обрабатываем основную выборку
-    currentRow := 0
     for rows.Next() {
-        currentRow++
-        log.Printf("🔄 Обрабатываю запись %d/%d", currentRow, totalRecords)
-        
         var chatID int64
         var displayName, userName, userUsername sql.NullString
         
         if err := rows.Scan(&chatID, &displayName, &userName, &userUsername); err != nil {
-            log.Printf("❌ Ошибка чтения данных для записи %d: %v", currentRow, err)
-            failedCount++
-            log.Printf("❌ Пропускаю чат из-за ошибки чтения")
+            log.Printf("⚠️ Ошибка чтения данных для чата: %v", err)
             continue
         }
-        
-        log.Printf("💬 Обрабатываю чат %d (запись %d/%d)", chatID, currentRow, totalRecords)
         
         // Формируем имя
         var finalName string
@@ -159,68 +146,78 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
             finalName = "Аноним"
         }
         
-        log.Printf("💬 Чат %d: выбрана свинособака %s", chatID, finalName)
+        tasks = append(tasks, ChatTask{ChatID: chatID, FinalName: finalName})
+        chatIDs = append(chatIDs, chatID)
         
-        // 1. Первое сообщение
-        msg1 := tgbotapi.NewMessage(chatID, "🔍 *Идёт сканирование пользователей чата на наличие свинособаки*")
-        msg1.ParseMode = "Markdown"
-        
-        if _, err := bot.Send(msg1); err != nil {
-            log.Printf("❌ Не отправилось 1-е сообщение в %d: %v", chatID, err)
-            log.Printf("❌ Пропускаю чат %d из-за ошибки отправки", chatID)
-            failedCount++
-            continue
-        }
-        
-        // Пауза для эффекта (сократим до 2 секунд для ускорения)
-        time.Sleep(2 * time.Second)
-        
-        // 2. Второе сообщение
-        msg2 := tgbotapi.NewMessage(chatID,
-            "🎉 *СВИНОСОБАКА ДНЯ*\n\n"+
-                "Сегодня свинособака – это *"+finalName+"*\n\n"+
-                "Поздравляем с этим почётным званием! 🐷🐶\n"+
-                "Это безусловно успех 🎊")
-        msg2.ParseMode = "Markdown"
-        
-        if _, err := bot.Send(msg2); err != nil {
-            log.Printf("❌ Не отправилось 2-е сообщение в %d: %v", chatID, err)
-            log.Printf("❌ Чат %d: второе сообщение не отправлено", chatID)
-            failedCount++
-            continue
-        }
-        
-        sentCount++
-        log.Printf("✅ Успешно отправлено в чат %d", chatID)
-        
-        // Пауза между чатами (сократим до 300 мс)
-        time.Sleep(300 * time.Millisecond)
+        log.Printf("📍 Добавлен чат %d: %s", chatID, finalName)
     }
     
-    // 🔴 4. ВЫКЛЮЧЕНИЕ БД - проверка ошибок
+    // Проверяем ошибки rows
     if err := rows.Err(); err != nil {
-        log.Printf("❌ Ошибка при итерации rows: %v", err)
+        log.Printf("⚠️ Ошибка при итерации rows: %v", err)
     }
     
-    // Проверяем, сколько строк реально обработано
-    log.Printf("📈 Обработано строк из rows.Next(): %d", currentRow)
+    log.Printf("📍 Всего чатов для рассылки: %d", len(tasks))
     
-    log.Printf("🎉 Рассылка завершена. Статистика:")
-    log.Printf("   Всего записей в таблице: %d", totalRecords)
-    log.Printf("   Чатов для рассылки: %d", len(chatIDs))
-    log.Printf("   Обработано записей в цикле: %d", currentRow)
-    log.Printf("   Успешно отправлено: %d", sentCount)
-    log.Printf("   Не удалось отправить: %d", failedCount)
+    // ПАРАЛЛЕЛЬНАЯ ОБРАБОТКА с семафором
+    maxWorkers := 5 // Ограничиваем параллелизм чтобы не превысить лимиты Telegram
+    semaphore := make(chan struct{}, maxWorkers)
+    var wg sync.WaitGroup
+    results := make(chan string, len(tasks))
     
-    // Проверяем несоответствие
-    if currentRow != totalRecords {
-        log.Printf("⚠️ Внимание: rows.Next() обработал %d записей, а в таблице %d!", 
-            currentRow, totalRecords)
+    startTime := time.Now()
+    log.Println("🚀 Начинаю параллельную рассылку...")
+    
+    // Запускаем воркеры
+    for _, task := range tasks {
+        wg.Add(1)
+        semaphore <- struct{}{} // Занимаем слот в семафоре
+        
+        go func(chatID int64, finalName string) {
+            defer func() {
+                <-semaphore // Освобождаем слот
+            }()
+            
+            processChat(bot, chatID, finalName, &wg, results)
+        }(task.ChatID, task.FinalName)
+        
+        // Минимальная задержка между запусками горутин
+        time.Sleep(50 * time.Millisecond)
     }
     
-    if sentCount+failedCount != currentRow {
-        log.Printf("⚠️ Внимание: sent(%d) + failed(%d) != processed(%d)", 
-            sentCount, failedCount, currentRow)
+    // Ждём завершения всех горутин
+    go func() {
+        wg.Wait()
+        close(results)
+    }()
+    
+    // Собираем результаты
+    successCount := 0
+    failCount := 0
+    
+    for result := range results {
+        log.Println(result)
+        if strings.HasPrefix(result, "✅") {
+            successCount++
+        } else {
+            failCount++
+        }
+    }
+    
+    duration := time.Since(startTime)
+    
+    // Статистика
+    log.Printf("🎉 Рассылка завершена за %v", duration)
+    log.Printf("📈 Статистика:")
+    log.Printf("   Всего чатов: %d", len(tasks))
+    log.Printf("   Успешно отправлено: %d", successCount)
+    log.Printf("   Не удалось отправить: %d", failCount)
+    
+    // Рассчитываем примерное время для 100 чатов
+    if len(tasks) > 0 {
+        timePerChat := duration / time.Duration(len(tasks))
+        estimated100 := timePerChat * 100 / maxWorkers
+        log.Printf("⏱️  Примерное время для 100 чатов: %v", estimated100)
     }
     
     return nil
