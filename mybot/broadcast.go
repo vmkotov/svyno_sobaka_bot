@@ -213,10 +213,10 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     log.Printf("   Успешно отправлено: %d", successCount)
     log.Printf("   Не удалось отправить: %d", failCount)
     
-    // Рассчитываем примерное время для 100 чатов
+    // Рассчитываем примерное время для 100 чатов (ИСПРАВЛЕННАЯ СТРОКА)
     if len(tasks) > 0 {
         timePerChat := duration / time.Duration(len(tasks))
-        estimated100 := timePerChat * 100 / maxWorkers
+        estimated100 := timePerChat * 100 / time.Duration(maxWorkers) // Исправлено
         log.Printf("⏱️  Примерное время для 100 чатов: %v", estimated100)
     }
     
