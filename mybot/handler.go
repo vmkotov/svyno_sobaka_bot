@@ -29,10 +29,22 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         handleCommand(bot, msg)
     }
     
-    // 5. Проверка триггерных слов "Свинособака"
+    // ID чата для логов (используется для всех триггеров)
     logChatID := int64(-1003516004835)
-    CheckSvinoSobakaTriggers(bot, msg, logChatID)
     
-    // 6. Проверка триггерных слов "Спартак"
+    // ПОСЛЕДОВАТЕЛЬНАЯ ПРОВЕРКА ТРИГГЕРОВ:
+    // При первом найденном триггере отправляется ответ и проверка прекращается
+    
+    // 5. Проверка триггерных слов "Свинособака" (первый приоритет)
+    if CheckSvinoSobakaTriggers(bot, msg, logChatID) {
+        return // Триггер сработал, дальше не проверяем
+    }
+    
+    // 6. НОВЫЙ ТРИГГЕР: "спартак куда денем" (второй приоритет)
+    if CheckHuiNadenemTriggers(bot, msg, logChatID) {
+        return // Триггер сработал, дальше не проверяем
+    }
+    
+    // 7. Проверка триггерных слов "Спартак" (старый триггер, теперь третий)
     CheckSpartakTriggers(bot, msg, logChatID)
 }
