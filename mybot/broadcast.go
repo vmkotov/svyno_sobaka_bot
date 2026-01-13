@@ -117,15 +117,22 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     log.Printf("📍 Всего чатов для рассылки: %d", len(chatIDs))
     
     // Теперь обрабатываем основную выборку
+    currentRow := 0
     for rows.Next() {
+        currentRow++
+        log.Printf("🔄 Обрабатываю запись %d/%d", currentRow, totalRecords)
+        
         var chatID int64
         var displayName, userName, userUsername sql.NullString
         
         if err := rows.Scan(&chatID, &displayName, &userName, &userUsername); err != nil {
-            log.Printf("⚠️ Ошибка чтения данных для чата: %v", err)
+            log.Printf("❌ Ошибка чтения данных для записи %d: %v", currentRow, err)
             failedCount++
+            log.Printf("❌ Пропускаю чат из-за ошибки чтения")
             continue
         }
+        
+        log.Printf("💬 Обрабатываю чат %d (запись %d/%d)", chatID, currentRow, totalRecords)
         
         // Формируем имя
         var finalName string
@@ -144,7 +151,8 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         msg1.ParseMode = "Markdown"
         
         if _, err := bot.Send(msg1); err != nil {
-            log.Printf("⚠️ Не отправилось 1-е сообщение в %d: %v", chatID, err)
+            log.Printf("❌ Не отправилось 1-е сообщение в %d: %v", chatID, err)
+            log.Printf("❌ Пропускаю чат %d из-за ошибки отправки", chatID)
             failedCount++
             continue
         }
@@ -161,7 +169,8 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         msg2.ParseMode = "Markdown"
         
         if _, err := bot.Send(msg2); err != nil {
-            log.Printf("⚠️ Не отправилось 2-е сообщение в %d: %v", chatID, err)
+            log.Printf("❌ Не отправилось 2-е сообщение в %d: %v", chatID, err)
+            log.Printf("❌ Чат %d: второе сообщение не отправлено", chatID)
             failedCount++
             continue
         }
@@ -175,19 +184,28 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     
     // 🔴 4. ВЫКЛЮЧЕНИЕ БД - проверка ошибок
     if err := rows.Err(); err != nil {
-        log.Printf("⚠️ Ошибка при итерации rows: %v", err)
+        log.Printf("❌ Ошибка при итерации rows: %v", err)
     }
+    
+    // Проверяем, сколько строк реально обработано
+    log.Printf("📈 Обработано строк из rows.Next(): %d", currentRow)
     
     log.Printf("🎉 Рассылка завершена. Статистика:")
     log.Printf("   Всего записей в таблице: %d", totalRecords)
     log.Printf("   Чатов для рассылки: %d", len(chatIDs))
+    log.Printf("   Обработано записей в цикле: %d", currentRow)
     log.Printf("   Успешно отправлено: %d", sentCount)
     log.Printf("   Не удалось отправить: %d", failedCount)
     
     // Проверяем несоответствие
-    if sentCount+failedCount != len(chatIDs) {
-        log.Printf("⚠️ Внимание: несоответствие в количестве! sent(%d) + failed(%d) != chats(%d)", 
-            sentCount, failedCount, len(chatIDs))
+    if currentRow != totalRecords {
+        log.Printf("⚠️ Внимание: rows.Next() обработал %d записей, а в таблице %d!", 
+            currentRow, totalRecords)
+    }
+    
+    if sentCount+failedCount != currentRow {
+        log.Printf("⚠️ Внимание: sent(%d) + failed(%d) != processed(%d)", 
+            sentCount, failedCount, currentRow)
     }
     
     return nil
