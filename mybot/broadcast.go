@@ -46,7 +46,7 @@ func processChat(bot *tgbotapi.BotAPI, chatID int64, finalName string, wg *sync.
 		"первое сообщение рассылки")
 
 	// Короткая пауза для эффекта
-	time.Sleep(800 * time.Millisecond)
+	time.Sleep(5000 * time.Millisecond)
 
 	// 2. Второе сообщение
 	msgText := fmt.Sprintf("🎉 СВИНОСОБАКА ДНЯ\n\n"+
