@@ -53,6 +53,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     // 🟢 2. ВКЛЮЧЕНИЕ БД - запрос данных с подсчётом
     log.Println("📋 Запрашиваем данные...")
     
+    // УНИФИЦИРУЕМ условия WHERE - используем dt_date_only везде
     // Сначала посчитаем сколько записей за сегодня
     var totalRecords int
     countQuery := `SELECT COUNT(*) FROM svyno_sobaka_bot.svyno_sobaka_of_the_day WHERE dt_date_only = CURRENT_DATE`
@@ -70,7 +71,21 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         return nil
     }
     
-    // Запрашиваем детальные данные
+    // ДОПОЛНИТЕЛЬНАЯ ДИАГНОСТИКА: выведем все chat_id которые есть по этому условию
+    var debugChatIDs []int64
+    debugRows, err := db.Query(`SELECT chat_id FROM svyno_sobaka_bot.svyno_sobaka_of_the_day WHERE dt_date_only = CURRENT_DATE ORDER BY chat_id`)
+    if err == nil {
+        defer debugRows.Close()
+        for debugRows.Next() {
+            var debugChatID int64
+            if err := debugRows.Scan(&debugChatID); err == nil {
+                debugChatIDs = append(debugChatIDs, debugChatID)
+            }
+        }
+        log.Printf("🔍 Диагностика: по условию dt_date_only = CURRENT_DATE найдены чаты: %v", debugChatIDs)
+    }
+    
+    // Запрашиваем детальные данные с ТЕМ ЖЕ условием
     rows, err := db.Query(`
         SELECT 
             chat_id,
@@ -78,7 +93,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
             user_name,
             user_username
         FROM svyno_sobaka_bot.svyno_sobaka_of_the_day 
-        WHERE dt_date_only = CURRENT_DATE
+        WHERE dt_date_only = CURRENT_DATE  -- ИСПРАВЛЕНО: используем dt_date_only
         ORDER BY chat_id
     `)
     
@@ -96,7 +111,7 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
     failedCount := 0
     chatIDs := make([]int64, 0)
     
-    // Сначала соберём все chat_id для логирования
+    // Сначала соберём все chat_id для логирования (с тем же условием!)
     tempRows, err := db.Query(`
         SELECT chat_id 
         FROM svyno_sobaka_bot.svyno_sobaka_of_the_day 
@@ -157,8 +172,8 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
             continue
         }
         
-        // Пауза для эффекта
-        time.Sleep(3 * time.Second)
+        // Пауза для эффекта (сократим до 2 секунд для ускорения)
+        time.Sleep(2 * time.Second)
         
         // 2. Второе сообщение
         msg2 := tgbotapi.NewMessage(chatID,
@@ -178,8 +193,8 @@ func SendSvynoSobakaBroadcast(bot *tgbotapi.BotAPI, db *sql.DB) error {
         sentCount++
         log.Printf("✅ Успешно отправлено в чат %d", chatID)
         
-        // Пауза между чатами
-        time.Sleep(500 * time.Millisecond)
+        // Пауза между чатами (сократим до 300 мс)
+        time.Sleep(300 * time.Millisecond)
     }
     
     // 🔴 4. ВЫКЛЮЧЕНИЕ БД - проверка ошибок
