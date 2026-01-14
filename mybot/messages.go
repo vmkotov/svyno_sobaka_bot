@@ -17,7 +17,7 @@ func handleStartCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	text := fmt.Sprintf(
 		"привет, я Свинособака. ты, %s, кстати тоже!\n"+
 			"бот пока работает в тестовом-режиме\n"+
-			"обо всех косяках писать @wmkotov",
+			"обо всех косяках писать сюда напрямую",
 		name)
 
 	sendMessage(bot, msg.Chat.ID, text, "старт")
