@@ -67,5 +67,14 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	// ===============================================
 	// 8. Проверка триггерных слов "Спартак" (четвертый приоритет)
 	// ===============================================
-	CheckSpartakTriggers(bot, msg, logChatID)
+	if CheckSpartakTriggers(bot, msg, logChatID) {
+		return // Триггер сработал, дальше не проверяем
+	}
+
+	// ===============================================
+	// 9. НОВЫЙ ТРИГГЕР: Алкогольные фразы (пятый приоритет)
+	// ===============================================
+	if CheckAlcoholTriggers(bot, msg, logChatID) {
+		return // Триггер сработал
+	}
 }
