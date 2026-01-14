@@ -3,8 +3,9 @@ package mybot
 import (
     "fmt"
     "log"
+    "math/rand"
     "strings"
-    "sync"
+    "time"
     
     tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -19,13 +20,9 @@ var dolbaebVerbs = []string{
     "промахнулся",
 }
 
-// Глобальный счетчик для статистики по чатам
-var dolbaebCounters = make(map[int64]int) // chatID -> counter
-var dolbaebMutex sync.Mutex
-
 // CheckDolbaebCertificateTriggers проверяет сообщение на глаголы падения/удара
 // Приоритет: 8-й (самый последний)
-// Реагирует на каждое 2-е срабатывание в чате
+// Вероятность: 50% (каждое 2-е примерно)
 func CheckDolbaebCertificateTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int64) bool {
     if msg.Text == "" {
         return false
@@ -47,56 +44,43 @@ func CheckDolbaebCertificateTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message
         return false
     }
     
-    log.Printf("🤕 Триггер DolbaebCertificate: найдено %d глаголов от @%s в чате %d", 
-               len(foundVerbs), msg.From.UserName, msg.Chat.ID)
+    log.Printf("🤕 Триггер DolbaebCertificate: найдено %d глаголов от @%s", 
+               len(foundVerbs), msg.From.UserName)
     
-    // Блокируем для безопасного доступа к счетчику
-    dolbaebMutex.Lock()
-    
-    // Инициализируем счетчик для чата если нужно
-    if _, exists := dolbaebCounters[msg.Chat.ID]; !exists {
-        dolbaebCounters[msg.Chat.ID] = 0
+    // Проверяем вероятность (50%)
+    rand.Seed(time.Now().UnixNano())
+    if rand.Float64() > 0.5 { // 50% шанс пропустить
+        log.Printf("🎲 Пропущено DolbaebCertificate (вероятность 50%%)")
+        sendDolbaebCertificateTriggerLogToChat(bot, msg, foundVerbs, false, logChatID)
+        return false
     }
     
-    // Увеличиваем счетчик
-    dolbaebCounters[msg.Chat.ID]++
-    counter := dolbaebCounters[msg.Chat.ID]
+    // Отправляем ответ
+    replyMsg := tgbotapi.NewMessage(msg.Chat.ID, "Сертификат долбаёба ему!")
+    replyMsg.ReplyToMessageID = msg.MessageID
     
-    dolbaebMutex.Unlock()
-    
-    // Определяем нужно ли отправлять ответ (каждое 2-е)
-    shouldRespond := (counter % 2 == 0)
-    
-    if shouldRespond {
-        // Отправляем ответ
-        replyMsg := tgbotapi.NewMessage(msg.Chat.ID, "Сертификат долбаёба ему!")
-        replyMsg.ReplyToMessageID = msg.MessageID
-        
-        if _, err := bot.Send(replyMsg); err != nil {
-            log.Printf("❌ Ошибка отправки DolbaebCertificate: %v", err)
-            return false
-        }
-        
-        log.Printf("✅ Отправлен ответ DolbaebCertificate (счётчик: %d)", counter)
-    } else {
-        log.Printf("🎲 Пропущено DolbaebCertificate (счётчик: %d, ждём 2)", counter)
+    if _, err := bot.Send(replyMsg); err != nil {
+        log.Printf("❌ Ошибка отправки DolbaebCertificate: %v", err)
+        return false
     }
     
-    // Логируем (всегда, даже если не отправили ответ)
-    sendDolbaebCertificateTriggerLogToChat(bot, msg, foundVerbs, counter, shouldRespond, logChatID)
+    log.Printf("✅ Отправлен ответ DolbaebCertificate")
     
-    return shouldRespond // Возвращаем true только если отправили ответ
+    // Логируем
+    sendDolbaebCertificateTriggerLogToChat(bot, msg, foundVerbs, true, logChatID)
+    
+    return true
 }
 
 // sendDolbaebCertificateTriggerLogToChat логирует срабатывание триггера
 func sendDolbaebCertificateTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, 
-                                           foundVerbs []string, counter int, responded bool, logChatID int64) {
+                                           foundVerbs []string, responded bool, logChatID int64) {
     
     var reactionStatus string
     if responded {
-        reactionStatus = "✅ *Отреагировал* (каждое 2-е)"
+        reactionStatus = "✅ *Отреагировал* (вероятность 50%%)"
     } else {
-        reactionStatus = "🎲 *Пропущено рандомайзером* (счётчик не кратен 2)"
+        reactionStatus = "🎲 *Пропущено рандомайзером* (вероятность 50%%)"
     }
     
     logText := fmt.Sprintf(
@@ -107,8 +91,6 @@ func sendDolbaebCertificateTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.
         "💬 *Чат ID:* `%d`\n" +
         "🎯 *Найденные глаголы:* %v\n" +
         "📊 *Всего глаголов:* %d\n" +
-        "🔢 *Счётчик в чате:* %d\n" +
-        "🎯 *Нужно для реакции:* каждое 2-е\n" +
         "💬 *Ответ:* %s",
         reactionStatus,
         escapeMarkdown(msg.Text),
@@ -116,7 +98,6 @@ func sendDolbaebCertificateTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.
         msg.Chat.ID,
         foundVerbs,
         len(foundVerbs),
-        counter,
         "Сертификат долбаёба ему!",
     )
     

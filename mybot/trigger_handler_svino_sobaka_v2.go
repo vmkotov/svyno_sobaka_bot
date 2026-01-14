@@ -3,8 +3,9 @@ package mybot
 import (
     "fmt"
     "log"
+    "math/rand"
     "strings"
-    "sync"
+    "time"
     
     tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -18,13 +19,9 @@ var svinoSobakaV2Words = []string{
     "свинособачник",
 }
 
-// Глобальный счетчик для статистики по чатам
-var svinoSobakaV2Counters = make(map[int64]int) // chatID -> counter
-var svinoSobakaV2Mutex sync.Mutex
-
 // CheckSvinoSobakaV2Triggers проверяет сообщение на слова свинособака-v2
-// Приоритет: 7-й (самый последний)
-// Реагирует на каждое 3-е срабатывание в чате
+// Приоритет: 7-й
+// Вероятность: 33% (примерно каждое 3-е)
 func CheckSvinoSobakaV2Triggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int64) bool {
     if msg.Text == "" {
         return false
@@ -46,56 +43,43 @@ func CheckSvinoSobakaV2Triggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, log
         return false
     }
     
-    log.Printf("🐷 Триггер SvinoSobakaV2: найдено %d слов от @%s в чате %d", 
-               len(foundWords), msg.From.UserName, msg.Chat.ID)
+    log.Printf("🐷 Триггер SvinoSobakaV2: найдено %d слов от @%s", 
+               len(foundWords), msg.From.UserName)
     
-    // Блокируем для безопасного доступа к счетчику
-    svinoSobakaV2Mutex.Lock()
-    
-    // Инициализируем счетчик для чата если нужно
-    if _, exists := svinoSobakaV2Counters[msg.Chat.ID]; !exists {
-        svinoSobakaV2Counters[msg.Chat.ID] = 0
+    // Проверяем вероятность (33%)
+    rand.Seed(time.Now().UnixNano())
+    if rand.Float64() > 0.33 { // 67% шанс пропустить
+        log.Printf("🎲 Пропущено SvinoSobakaV2 (вероятность 33%%)")
+        sendSvinoSobakaV2TriggerLogToChat(bot, msg, foundWords, false, logChatID)
+        return false
     }
     
-    // Увеличиваем счетчик
-    svinoSobakaV2Counters[msg.Chat.ID]++
-    counter := svinoSobakaV2Counters[msg.Chat.ID]
+    // Отправляем ответ
+    replyMsg := tgbotapi.NewMessage(msg.Chat.ID, "А может быть всё-таки свинособака – это ты?")
+    replyMsg.ReplyToMessageID = msg.MessageID
     
-    svinoSobakaV2Mutex.Unlock()
-    
-    // Определяем нужно ли отправлять ответ (каждое 3-е)
-    shouldRespond := (counter % 3 == 0)
-    
-    if shouldRespond {
-        // Отправляем ответ
-        replyMsg := tgbotapi.NewMessage(msg.Chat.ID, "А может быть всё-таки свинособака – это ты?")
-        replyMsg.ReplyToMessageID = msg.MessageID
-        
-        if _, err := bot.Send(replyMsg); err != nil {
-            log.Printf("❌ Ошибка отправки SvinoSobakaV2: %v", err)
-            return false
-        }
-        
-        log.Printf("✅ Отправлен ответ SvinoSobakaV2 (счётчик: %d)", counter)
-    } else {
-        log.Printf("🎲 Пропущено SvinoSobakaV2 (счётчик: %d, ждём 3)", counter)
+    if _, err := bot.Send(replyMsg); err != nil {
+        log.Printf("❌ Ошибка отправки SvinoSobakaV2: %v", err)
+        return false
     }
     
-    // Логируем (всегда, даже если не отправили ответ)
-    sendSvinoSobakaV2TriggerLogToChat(bot, msg, foundWords, counter, shouldRespond, logChatID)
+    log.Printf("✅ Отправлен ответ SvinoSobakaV2")
     
-    return shouldRespond // Возвращаем true только если отправили ответ
+    // Логируем
+    sendSvinoSobakaV2TriggerLogToChat(bot, msg, foundWords, true, logChatID)
+    
+    return true
 }
 
 // sendSvinoSobakaV2TriggerLogToChat логирует срабатывание триггера
 func sendSvinoSobakaV2TriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, 
-                                      foundWords []string, counter int, responded bool, logChatID int64) {
+                                      foundWords []string, responded bool, logChatID int64) {
     
     var reactionStatus string
     if responded {
-        reactionStatus = "✅ *Отреагировал* (каждое 3-е)"
+        reactionStatus = "✅ *Отреагировал* (вероятность 33%%)"
     } else {
-        reactionStatus = "🎲 *Пропущено рандомайзером* (счётчик не кратен 3)"
+        reactionStatus = "🎲 *Пропущено рандомайзером* (вероятность 33%%)"
     }
     
     logText := fmt.Sprintf(
@@ -106,8 +90,6 @@ func sendSvinoSobakaV2TriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Messa
         "💬 *Чат ID:* `%d`\n" +
         "🎯 *Найденные слова:* %v\n" +
         "📊 *Всего слов:* %d\n" +
-        "🔢 *Счётчик в чате:* %d\n" +
-        "🎯 *Нужно для реакции:* каждое 3-е\n" +
         "💬 *Ответ:* %s",
         reactionStatus,
         escapeMarkdown(msg.Text),
@@ -115,7 +97,6 @@ func sendSvinoSobakaV2TriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Messa
         msg.Chat.ID,
         foundWords,
         len(foundWords),
-        counter,
         "А может быть всё-таки свинособака – это ты?",
     )
     
