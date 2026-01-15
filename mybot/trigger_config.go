@@ -38,16 +38,15 @@ type Trigger struct {
     Responses    []Response `json:"responses"`
 }
 
-type TriggerConfig struct {
-    Triggers []Trigger `json:"triggers"`
-}
+// ИЗМЕНЕНИЕ ЗДЕСЬ: Принимаем массив триггеров напрямую
+type TriggerConfig []Trigger
 
 // =============================================
 // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 // =============================================
 
 var (
-    triggerConfig *TriggerConfig
+    triggerConfig TriggerConfig
     configMutex   sync.RWMutex
     randSource    = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
@@ -71,18 +70,18 @@ func LoadTriggerConfig(filename string) error {
     }
     
     // Сортируем триггеры по приоритету
-    sort.Slice(config.Triggers, func(i, j int) bool {
-        return config.Triggers[i].Priority < config.Triggers[j].Priority
+    sort.Slice(config, func(i, j int) bool {
+        return config[i].Priority < config[j].Priority
     })
     
     configMutex.Lock()
-    triggerConfig = &config
+    triggerConfig = config
     configMutex.Unlock()
     
-    log.Printf("✅ Загружено %d триггеров", len(config.Triggers))
+    log.Printf("✅ Загружено %d триггеров", len(config))
     
     // Выводим информацию о загруженных триггерах
-    for i, trigger := range config.Triggers {
+    for i, trigger := range config {
         log.Printf("   %2d. %-30s (приоритет: %2d, вероятность: %.0f%%, ответов: %d)",
             i+1, trigger.TriggerName, trigger.Priority, 
             trigger.Probability*100, len(trigger.Responses))
@@ -92,7 +91,7 @@ func LoadTriggerConfig(filename string) error {
 }
 
 // GetTriggerConfig возвращает конфигурацию (потокобезопасно)
-func GetTriggerConfig() *TriggerConfig {
+func GetTriggerConfig() TriggerConfig {
     configMutex.RLock()
     defer configMutex.RUnlock()
     return triggerConfig

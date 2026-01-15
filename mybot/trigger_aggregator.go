@@ -40,7 +40,7 @@ func CheckAllTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int
     text := normalizeText(msg.Text)
     
     // Проверяем триггеры в порядке приоритета (они уже отсортированы)
-    for _, trigger := range config.Triggers {
+    for _, trigger := range config {
         if checkSingleTrigger(bot, msg, text, &trigger, logChatID) {
             return true // Триггер сработал, дальше не проверяем
         }
