@@ -1,4 +1,8 @@
-[
+package mybot
+
+// TriggersJSON содержит JSON конфигурацию всех триггеров
+// Этот файл компилируется вместе с ботом
+const TriggersJSON = `[
   {
     "trigger_id": 1,
     "trigger_name": "Ебать уфу/спартак",
@@ -1411,4 +1415,4 @@
       }
     ]
   }
-]
+]` // Здесь будет ВЕСЬ JSON из trigger.md

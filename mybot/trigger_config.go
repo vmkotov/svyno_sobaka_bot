@@ -2,8 +2,6 @@ package mybot
 
 import (
     "encoding/json"
-    "fmt"
-    "io/ioutil"
     "log"
     "math/rand"
     "sort"
@@ -38,7 +36,6 @@ type Trigger struct {
     Responses    []Response `json:"responses"`
 }
 
-// ИЗМЕНЕНИЕ ЗДЕСЬ: Принимаем массив триггеров напрямую
 type TriggerConfig []Trigger
 
 // =============================================
@@ -55,18 +52,14 @@ var (
 // ОСНОВНЫЕ ФУНКЦИИ
 // =============================================
 
-// LoadTriggerConfig загружает конфигурацию из JSON файла
-func LoadTriggerConfig(filename string) error {
-    log.Printf("📁 Загрузка конфигурации триггеров из %s", filename)
-    
-    data, err := ioutil.ReadFile(filename)
-    if err != nil {
-        return fmt.Errorf("ошибка чтения файла конфигурации: %v", err)
-    }
+// LoadTriggerConfig загружает конфигурацию из встроенной строки JSON
+func LoadTriggerConfig() error {
+    log.Printf("📁 Загрузка встроенной конфигурации триггеров")
     
     var config TriggerConfig
-    if err := json.Unmarshal(data, &config); err != nil {
-        return fmt.Errorf("ошибка парсинга JSON: %v", err)
+    if err := json.Unmarshal([]byte(TriggersJSON), &config); err != nil {
+        log.Printf("❌ Ошибка парсинга JSON: %v", err)
+        return err
     }
     
     // Сортируем триггеры по приоритету
@@ -95,11 +88,6 @@ func GetTriggerConfig() TriggerConfig {
     configMutex.RLock()
     defer configMutex.RUnlock()
     return triggerConfig
-}
-
-// ReloadTriggerConfig перезагружает конфигурацию (можно вызывать через HTTP)
-func ReloadTriggerConfig(filename string) error {
-    return LoadTriggerConfig(filename)
 }
 
 // normalizeText приводит текст к нижнему регистру и удаляет знаки препинания
