@@ -53,3 +53,8 @@ vendor/
 
 # Docker игноры (опционально)
 docker-compose.override.yml
+
+# Скомпилированные бинарники
+svyno_sobaka_bot
+mybot/mybot
+mybot/
