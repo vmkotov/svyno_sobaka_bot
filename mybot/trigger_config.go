@@ -1,0 +1,128 @@
+package mybot
+
+import (
+    "encoding/json"
+    "fmt"
+    "io/ioutil"
+    "log"
+    "math/rand"
+    "sort"
+    "strings"
+    "sync"
+    "time"
+)
+
+// =============================================
+// СТРУКТУРЫ ДАННЫХ ДЛЯ JSON КОНФИГА
+// =============================================
+
+type Pattern struct {
+    PatternID   int    `json:"pattern_id"`
+    PatternText string `json:"pattern_text"`
+    PatternType string `json:"pattern_type"`
+}
+
+type Response struct {
+    ResponseID     int    `json:"response_id"`
+    ResponseText   string `json:"response_text"`
+    ResponseWeight int    `json:"response_weight"`
+}
+
+type Trigger struct {
+    TriggerID    int        `json:"trigger_id"`
+    TriggerName  string     `json:"trigger_name"`
+    TechKey      string     `json:"tech_key"`
+    Priority     int        `json:"priority"`
+    Probability  float64    `json:"probability"`
+    Patterns     []Pattern  `json:"patterns"`
+    Responses    []Response `json:"responses"`
+}
+
+type TriggerConfig struct {
+    Triggers []Trigger `json:"triggers"`
+}
+
+// =============================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// =============================================
+
+var (
+    triggerConfig *TriggerConfig
+    configMutex   sync.RWMutex
+    randSource    = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
+
+// =============================================
+// ОСНОВНЫЕ ФУНКЦИИ
+// =============================================
+
+// LoadTriggerConfig загружает конфигурацию из JSON файла
+func LoadTriggerConfig(filename string) error {
+    log.Printf("📁 Загрузка конфигурации триггеров из %s", filename)
+    
+    data, err := ioutil.ReadFile(filename)
+    if err != nil {
+        return fmt.Errorf("ошибка чтения файла конфигурации: %v", err)
+    }
+    
+    var config TriggerConfig
+    if err := json.Unmarshal(data, &config); err != nil {
+        return fmt.Errorf("ошибка парсинга JSON: %v", err)
+    }
+    
+    // Сортируем триггеры по приоритету
+    sort.Slice(config.Triggers, func(i, j int) bool {
+        return config.Triggers[i].Priority < config.Triggers[j].Priority
+    })
+    
+    configMutex.Lock()
+    triggerConfig = &config
+    configMutex.Unlock()
+    
+    log.Printf("✅ Загружено %d триггеров", len(config.Triggers))
+    
+    // Выводим информацию о загруженных триггерах
+    for i, trigger := range config.Triggers {
+        log.Printf("   %2d. %-30s (приоритет: %2d, вероятность: %.0f%%, ответов: %d)",
+            i+1, trigger.TriggerName, trigger.Priority, 
+            trigger.Probability*100, len(trigger.Responses))
+    }
+    
+    return nil
+}
+
+// GetTriggerConfig возвращает конфигурацию (потокобезопасно)
+func GetTriggerConfig() *TriggerConfig {
+    configMutex.RLock()
+    defer configMutex.RUnlock()
+    return triggerConfig
+}
+
+// ReloadTriggerConfig перезагружает конфигурацию (можно вызывать через HTTP)
+func ReloadTriggerConfig(filename string) error {
+    return LoadTriggerConfig(filename)
+}
+
+// normalizeText приводит текст к нижнему регистру и удаляет знаки препинания
+// (как в оригинальных триггерных модулях)
+func normalizeText(text string) string {
+    // 1. К нижнему регистру
+    text = strings.ToLower(text)
+    
+    // 2. Удаляем знаки препинания: ,.!?- (и множественные пробелы)
+    replacer := strings.NewReplacer(
+        ",", " ",
+        ".", " ",
+        "!", " ",
+        "?", " ",
+        "-", " ",
+        "  ", " ", // двойные пробелы -> одинарные
+    )
+    
+    text = replacer.Replace(text)
+    
+    // 3. Убираем лишние пробелы
+    text = strings.TrimSpace(text)
+    
+    return text
+}
