@@ -23,7 +23,7 @@ func CheckAllTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int
     
     // Ленивая загрузка конфигурации (только при первом вызове)
     configOnce.Do(func() {
-        err := LoadTriggerConfig("trigger.md")
+        err := LoadTriggerConfig("mybot/trigger.md")
         if err != nil {
             log.Printf("❌ Ошибка загрузки конфигурации триггеров: %v", err)
             log.Println("⚠️ Триггеры отключены")
