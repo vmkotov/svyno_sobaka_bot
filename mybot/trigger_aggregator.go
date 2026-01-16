@@ -189,7 +189,8 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         "💬 *Чат ID:* `%d`\n" +
         "🎯 *Найденные паттерны:* %v\n" +
         "📊 *Всего паттернов:* %d\n" +
-        "💬 *Ответ:* %s",
+        "💬 *Ответ:* %s\n\n" +
+        "#%s",
         escapeMarkdown(trigger.TriggerName),
         reactionStatus,
         escapeMarkdown(msg.Text),
@@ -198,6 +199,7 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         patternsForLog,
         len(foundPatterns),
         escapeMarkdown(responseText),
+        trigger.TechKey,
     )
     
     logMsg := tgbotapi.NewMessage(logChatID, logText)
