@@ -181,6 +181,7 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         }
     }
     
+    // Формируем основную часть лога
     logText := fmt.Sprintf(
         "🔔 *Триггер: %s*\n\n" +
         "%s\n" +
@@ -189,8 +190,7 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         "💬 *Чат ID:* `%d`\n" +
         "🎯 *Найденные паттерны:* %v\n" +
         "📊 *Всего паттернов:* %d\n" +
-        "💬 *Ответ:* %s\n\n" +
-        "#%s",
+        "💬 *Ответ:* %s",
         escapeMarkdown(trigger.TriggerName),
         reactionStatus,
         escapeMarkdown(msg.Text),
@@ -199,8 +199,11 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         patternsForLog,
         len(foundPatterns),
         escapeMarkdown(responseText),
-        trigger.TechKey,
     )
+    
+    // Добавляем хеш-тег БЕЗ Markdown форматирования (просто текст)
+    hashtag := "#" + trigger.TechKey
+    logText += "\n\n" + hashtag
     
     logMsg := tgbotapi.NewMessage(logChatID, logText)
     logMsg.ParseMode = "Markdown"
