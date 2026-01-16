@@ -1,38 +1,32 @@
 package mybot
 
 import (
+    "database/sql"
     "fmt"
     "log"
     "strings"
-    "sync"
     
     tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-// Глобальная переменная для ленивой загрузки конфигурации
-var (
-    configOnce sync.Once
-)
-
 // CheckAllTriggers проверяет ВСЕ триггеры в порядке приоритета
 // Возвращает true при первом срабатывании любого триггера
-func CheckAllTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int64) bool {
+func CheckAllTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int64, db *sql.DB) bool {
     if msg.Text == "" {
         return false
     }
     
-    // Ленивая загрузка конфигурации (только при первом вызове)
-    configOnce.Do(func() {
-        err := LoadTriggerConfig() // БЕЗ параметра - загружаем из константы
-        if err != nil {
-            log.Printf("❌ Ошибка загрузки конфигурации триггеров: %v", err)
-            log.Println("⚠️ Триггеры отключены")
-        }
-    })
+    // Загружаем конфигурацию из БД при каждом сообщении
+    if err := LoadTriggerConfig(db); err != nil {
+        log.Printf("❌ Ошибка загрузки конфигурации триггеров: %v", err)
+        log.Printf("⚠️ Триггеры отключены для этого сообщения")
+        return false
+    }
     
     config := GetTriggerConfig()
-    if config == nil {
-        // Конфигурация не загружена - триггеры не работают
+    if config == nil || len(config) == 0 {
+        // Конфигурация не загружена или пуста - триггеры не работают
+        log.Printf("⚠️ Конфигурация триггеров пуста или не загружена")
         return false
     }
     
@@ -61,7 +55,7 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
         }
     }
     
-    // Если ни один паттерн не найден - пропускаем триггер
+    // Если ни один паттерн не найден - пропскаем триггер
     if len(foundPatterns) == 0 {
         return false
     }

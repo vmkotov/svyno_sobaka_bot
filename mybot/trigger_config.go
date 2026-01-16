@@ -1,7 +1,9 @@
 package mybot
 
 import (
+    "database/sql"
     "encoding/json"
+    "fmt"
     "log"
     "math/rand"
     "sort"
@@ -52,13 +54,26 @@ var (
 // ОСНОВНЫЕ ФУНКЦИИ
 // =============================================
 
-// LoadTriggerConfig загружает конфигурацию из встроенной строки JSON
-func LoadTriggerConfig() error {
-    log.Printf("📁 Загрузка встроенной конфигурации триггеров")
+// LoadTriggerConfig загружает конфигурацию триггеров из БД
+func LoadTriggerConfig(db *sql.DB) error {
+    log.Printf("🗃️ Загрузка конфигурации триггеров из БД...")
     
+    if db == nil {
+        log.Printf("📭 БД не подключена, триггеры отключены")
+        return fmt.Errorf("БД не подключена")
+    }
+    
+    // Получаем JSON из БД
+    jsonData, err := GetTriggersConfigJSON(db)
+    if err != nil {
+        log.Printf("❌ Ошибка загрузки из БД: %v", err)
+        return err
+    }
+    
+    // Парсим JSON
     var config TriggerConfig
-    if err := json.Unmarshal([]byte(TriggersJSON), &config); err != nil {
-        log.Printf("❌ Ошибка парсинга JSON: %v", err)
+    if err := json.Unmarshal(jsonData, &config); err != nil {
+        log.Printf("❌ Ошибка парсинга JSON из БД: %v", err)
         return err
     }
     
@@ -67,11 +82,12 @@ func LoadTriggerConfig() error {
         return config[i].Priority < config[j].Priority
     })
     
+    // Сохраняем в глобальную переменную
     configMutex.Lock()
     triggerConfig = config
     configMutex.Unlock()
     
-    log.Printf("✅ Загружено %d триггеров", len(config))
+    log.Printf("✅ Загружено %d триггеров из БД", len(config))
     
     // Выводим информацию о загруженных триггерах
     for i, trigger := range config {

@@ -43,7 +43,7 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	// ===============================================
 	// 5. ПРОВЕРКА ВСЕХ ТРИГГЕРОВ (ОБЪЕДИНЕННАЯ ВЕРСИЯ)
 	// ===============================================
-	if CheckAllTriggers(bot, msg, logChatID) {
+	if CheckAllTriggers(bot, msg, logChatID, db) {
 		return // Триггер сработал, дальше не проверяем
 	}
 }
