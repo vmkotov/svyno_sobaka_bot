@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	log.Println("🚀 Запуск бота с БД и рассылкой...")
+	log.Println("🚀 Запуск бота...")
 	godotenv.Load()
 
 	// 1. Бот
@@ -48,6 +48,17 @@ func main() {
 			} else {
 				defer db.Close()
 				log.Println("✅ Подключено к PostgreSQL")
+
+				// В main.go заменяем блок загрузки триггеров:
+				log.Println("🔄 ЗАГРУЗКА ТРИГГЕРОВ ПРИ СТАРТЕ...")
+
+				if err := mybot.LoadTriggerConfig(db); err != nil {
+					log.Printf("❌ ОШИБКА ЗАГРУЗКИ ТРИГГЕРОВ: %v", err)
+					log.Println("ℹ️ Бот будет работать, но триггеры не активны")
+					log.Println("ℹ️ Используйте /refresh_me чтобы загрузить триггеры")
+				} else {
+					log.Println("🎉 ТРИГГЕРЫ УСПЕШНО ЗАГРУЖЕНЫ ИЗ БД!")
+				}
 			}
 		}
 	}
@@ -63,12 +74,10 @@ func main() {
 	}
 
 	// 5. Настраиваем HTTP обработчики
-	// Основной вебхук от Telegram
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handleWebhook(w, r, bot, forwardChatID, db)
 	})
 
-	// Эндпоинт для рассылки
 	broadcastHandler := mybot.SetupBroadcastHandler(bot, db, broadcastSecret)
 	http.HandleFunc("/admin/broadcast", broadcastHandler)
 
@@ -87,7 +96,7 @@ func main() {
 	}
 }
 
-// handleWebhook обрабатывает вебхук от Telegram
+// handleWebhook без изменений
 func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 	forwardChatID int64, db *sql.DB) {
 

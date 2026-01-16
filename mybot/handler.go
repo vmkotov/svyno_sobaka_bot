@@ -31,10 +31,11 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	SendMessageLog(bot, msg, botUsername, bot.Self.ID)
 
 	// ===============================================
-	// 4. Команды
+	// 4. Команды (ТЕПЕРЬ С DB!)
 	// ===============================================
 	if msg.IsCommand() {
-		handleCommand(bot, msg)
+		handleCommand(bot, msg, db) // ← ДОБАВИЛИ db ПАРАМЕТР!
+		return                      // После команды дальше не идём
 	}
 
 	// ID чата для логов (используется для всех триггеров)
