@@ -37,6 +37,7 @@ func CheckAllTriggers(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, logChatID int
 }
 
 // checkSingleTrigger проверяет один триггер
+// Возвращает: true если паттерны найдены (даже если ответ не отправлен)
 func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	normalizedText string, trigger *Trigger, logChatID int64) bool {
 
@@ -56,20 +57,24 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	log.Printf("🔍 Триггер %s (приоритет %d): найдено %d паттернов от @%s",
 		trigger.TriggerName, trigger.Priority, len(foundPatterns), msg.From.UserName)
 
+	// ТРИГГЕР СРАБОТАЛ! Возвращаем true в любом случае
+	// Но сначала проверяем вероятность ответа
+
 	// 2. Проверяем вероятность (если < 1.0)
 	if trigger.Probability < 1.0 {
 		if randSource.Float64() > trigger.Probability {
-			log.Printf("🎲 Пропущен триггер %s (вероятность %.0f%%)",
+			log.Printf("🎲 Пропущен ОТВЕТ триггера %s (вероятность %.0f%%)",
 				trigger.TriggerName, trigger.Probability*100)
 			sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, -1, logChatID)
-			return false
+			return true // Триггер сработал, но ответ не отправлен
 		}
 	}
 
 	// 3. Выбираем случайный ответ (если несколько)
 	if len(trigger.Responses) == 0 {
 		log.Printf("⚠️ У триггера %s нет ответов", trigger.TriggerName)
-		return false
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, -1, logChatID)
+		return true // Триггер сработал, но нет ответов
 	}
 
 	responseIndex := selectWeightedResponse(trigger.Responses)
@@ -89,7 +94,8 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	if _, err := bot.Send(replyMsg); err != nil {
 		log.Printf("❌ Ошибка отправки ответа триггера %s: %v",
 			trigger.TriggerName, err)
-		return false
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID)
+		return true // Триггер сработал, но ошибка отправки
 	}
 
 	log.Printf("✅ Отправлен ответ триггера %s: %.30s...",
@@ -98,7 +104,7 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	// 5. Логируем в лог-чат
 	sendTriggerLogToChat(bot, msg, trigger, foundPatterns, true, responseIndex, logChatID)
 
-	return true
+	return true // Триггер сработал И ответ отправлен
 }
 
 // selectWeightedResponse выбирает ответ с учетом весов
