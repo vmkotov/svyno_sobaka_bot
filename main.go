@@ -123,7 +123,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 	if update.Message != nil {
 		mybot.HandleMessage(bot, update.Message, forwardChatID, db, bot.Self.UserName)
 	}
-	
+
 	if update.CallbackQuery != nil {
 		mybot.HandleCallback(bot, update.CallbackQuery, db)
 	}
