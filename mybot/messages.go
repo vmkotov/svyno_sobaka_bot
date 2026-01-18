@@ -9,23 +9,33 @@ import (
 
 // handleStartCommand - обработка команды /start
 func handleStartCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	name := msg.From.FirstName
-	if msg.From.UserName != "" {
-		name = "@" + msg.From.UserName
-	}
-
+	// Убрали неиспользуемую переменную name
 	text := fmt.Sprintf(
-		"привет, я Свинособака. ты, %s, кстати тоже!\n"+
-			"бот пока работает в тестовом-режиме\n"+
-			"обо всех косяках писать сюда напрямую",
-		name)
+		"Привет! Я бот-свинособака 🐷🐶\n"+
+			"Для перезагрузки триггеров из БД нажми кнопку:",
+	)
 
-	sendMessage(bot, msg.Chat.ID, text, "старт")
+	// Создаем сообщение
+	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+	
+	// Добавляем inline-кнопку
+	refreshButton := tgbotapi.NewInlineKeyboardButtonData("🔄 Обновить триггеры", "refresh_triggers")
+	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(refreshButton),
+	)
+	reply.ReplyMarkup = inlineKeyboard
+
+	// Отправляем сообщение с кнопкой
+	if _, err := bot.Send(reply); err != nil {
+		log.Printf("❌ Ошибка отправки стартового сообщения: %v", err)
+	} else {
+		log.Printf("✅ Стартовое сообщение с кнопкой отправлено для @%s", msg.From.UserName)
+	}
 }
 
 // handleHelpCommand - обработка команды /help
 func handleHelpCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	text := "📋 Команды:\n/start - Начать\n/help - Помощь"
+	text := "📋 Команды:\n/start - Начать\n/help - Помощь\n/refresh_me - Обновить триггеры из БД"
 	sendMessage(bot, msg.Chat.ID, text, "справка")
 }
 

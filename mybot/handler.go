@@ -48,3 +48,14 @@ func HandleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 		return // Триггер сработал, дальше не проверяем
 	}
 }
+
+// HandleCallback - обрабатывает callback-запросы от inline-кнопок
+// ТОЛЬКО ВЫЗОВ функции из callbacks.go - логика там!
+func HandleCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
+	log.Printf("🔄 [Handler] Callback от @%s", callbackQuery.From.UserName)
+	
+	// ===============================================
+	// ВЫЗОВ ФУНКЦИИ ИЗ ОТДЕЛЬНОГО МОДУЛЯ
+	// ===============================================
+	HandleCallbackQuery(bot, callbackQuery, db)
+}

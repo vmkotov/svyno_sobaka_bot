@@ -96,7 +96,7 @@ func main() {
 	}
 }
 
-// handleWebhook без изменений
+// handleWebhook - обработка вебхука от Telegram
 func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 	forwardChatID int64, db *sql.DB) {
 
@@ -119,8 +119,13 @@ func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 		return
 	}
 
+	// МАРШРУТИЗАЦИЯ ПО ТИПАМ UPDATE
 	if update.Message != nil {
 		mybot.HandleMessage(bot, update.Message, forwardChatID, db, bot.Self.UserName)
+	}
+	
+	if update.CallbackQuery != nil {
+		mybot.HandleCallback(bot, update.CallbackQuery, db)
 	}
 
 	w.WriteHeader(http.StatusOK)
