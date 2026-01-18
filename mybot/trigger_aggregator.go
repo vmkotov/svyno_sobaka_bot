@@ -212,14 +212,13 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 }
 
 // escapeMarkdownForLog - безопасное экранирование для логов
-// Отличается от обычного escapeMarkdown - не экранирует дефисы и точки
-func escapeMarkdownForLog(text string) string {
+func escapeMarkdownForLog(text string) string {// Отличается от обычного escapeMarkdown - не экранирует дефисы и точки
 	if text == "" {
 		return ""
 	}
 	
 	// Минимальный набор символов для экранирования в логах
-	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "!", "\\"}
+	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "\\"}
 	
 	result := text
 	for _, char := range specialChars {

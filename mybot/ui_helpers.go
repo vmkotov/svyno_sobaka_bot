@@ -22,8 +22,8 @@ func SendMessage(bot *tgbotapi.BotAPI, chatID int64, text, context string) {
 
 // escapeMarkdown - экранирование для Telegram MarkdownV2
 // Специальные символы для Telegram MarkdownV2:
-// _ * [ ] ( ) ~ ` > # + = | { } ! \
-// НО: дефис (-), точка (.) не нужно экранировать!
+// _ * [ ] ( ) ~ ` > # + = | { } \
+// НО: дефис (-), точка (.), восклицательный знак (!) не нужно экранировать!
 func escapeMarkdown(text string) string {
     if text == "" {
         return ""
@@ -35,7 +35,7 @@ func escapeMarkdown(text string) string {
     result = strings.ReplaceAll(result, "\\", "\\\\")
     
     // 2. Экранируем специальные символы
-    specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "!", "\\"}
+    specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "\\"}
     
     for _, char := range specialChars {
         result = strings.ReplaceAll(result, char, "\\"+char)
