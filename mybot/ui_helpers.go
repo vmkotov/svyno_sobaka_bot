@@ -20,38 +20,11 @@ func SendMessage(bot *tgbotapi.BotAPI, chatID int64, text, context string) {
     }
 }
 
-// escapeMarkdown - экранирование для Telegram Markdown V2
+// escapeMarkdown - экранирование для Telegram MarkdownV2
 // Специальные символы для Telegram MarkdownV2:
-// _ * [ ] ( ) ~ ` > # + - = | { } . !
-// НО: дефис (-) не нужно экранировать в большинстве случаев!
+// _ * [ ] ( ) ~ ` > # + = | { } ! \
+// НО: дефис (-), точка (.) не нужно экранировать!
 func escapeMarkdown(text string) string {
-    if text == "" {
-        return ""
-    }
-    
-    // Специальные символы которые НУЖНО экранировать в Telegram Markdown
-    // Источник: https://core.telegram.org/bots/api#markdownv2-style
-    specialChars := []string{
-        "_", "*", "[", "]", "(", ")", "~", "`", 
-        ">", "#", "+", "=", "|", "{", "}", ".", "!",
-        // Дефис (-) обычно НЕ нужно экранировать, только если он часть конструкции
-    }
-    
-    result := text
-    
-    // Сначала экранируем обратные слеши
-    result = strings.ReplaceAll(result, "\\", "\\\\")
-    
-    // Затем экранируем все специальные символы
-    for _, char := range specialChars {
-        result = strings.ReplaceAll(result, char, "\\"+char)
-    }
-    
-    return result
-}
-
-// escapeMarkdownV2 - более умная версия, которая не экранирует дефисы в словах
-func escapeMarkdownV2(text string) string {
     if text == "" {
         return ""
     }
@@ -61,25 +34,20 @@ func escapeMarkdownV2(text string) string {
     // 1. Экранируем обратные слеши
     result = strings.ReplaceAll(result, "\\", "\\\\")
     
-    // 2. Экранируем специальные символы, но осторожно с дефисами
-    // Список символов которые ВСЕГДА нужно экранировать
-    alwaysEscape := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "!", "\\"}
+    // 2. Экранируем специальные символы
+    specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "!", "\\"}
     
-    for _, char := range alwaysEscape {
+    for _, char := range specialChars {
         result = strings.ReplaceAll(result, char, "\\"+char)
     }
-    
-    // 3. Точку экранируем только если она не в числе или URL
-    // (упрощенная версия)
-    result = strings.ReplaceAll(result, ".", "\\.")
     
     return result
 }
 
 // safeMarkdown - безопасное создание Markdown текста
 func safeMarkdown(text string) string {
-    // Для обычного текста (не кода) используем умную версию
-    return escapeMarkdownV2(text)
+    // Для обычного текста используем escapeMarkdown
+    return escapeMarkdown(text)
 }
 
 // safeCode - для кодовых блоков (внутри `)
