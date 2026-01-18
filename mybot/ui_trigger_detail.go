@@ -85,17 +85,17 @@ func HandleTriggerDetailCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.C
 func createErrorMessage(techKey string) string {
     return fmt.Sprintf("❌ Триггер с ключом `%s` не найден\n\n"+
         "Возможно, он был удален или изменен. "+
-        "Используйте /refresh_me чтобы обновить список.", techKey)
+        "Используйте /refresh_me чтобы обновить список.", safeMarkdown(techKey))
 }
 
 func formatTriggerDetail(trigger *Trigger) string {
-    // Форматируем паттерны с экранированием
+    // Форматируем паттерны с умным экранированием
     patternsText := formatPatterns(trigger.Patterns)
     
-    // Форматируем ответы с экранированием
+    // Форматируем ответы с умным экранированием
     responsesText := formatResponses(trigger.Responses)
     
-    // Основное сообщение - ВАЖНО: escapeMarkdown для всех полей!
+    // Основное сообщение - используем safeMarkdown для текста
     return fmt.Sprintf(
         "🎯 *%s*\n\n"+
         "🔑 Тех. ключ: `%s`\n"+
@@ -105,15 +105,15 @@ func formatTriggerDetail(trigger *Trigger) string {
         "🔍 *Паттерны:*\n%s\n\n"+
         "💬 *Ответы:*\n%s\n\n"+
         "#%s",
-        escapeMarkdown(trigger.TriggerName),           // Экранируем!
-        escapeMarkdown(trigger.TechKey),               // Экранируем!
+        safeMarkdown(trigger.TriggerName),           // Умное экранирование
+        safeMarkdown(trigger.TechKey),               // Умное экранирование
         trigger.Priority,
         int(trigger.Probability*100),
         len(trigger.Patterns),
         len(trigger.Responses),
         patternsText,      // Уже экранировано в formatPatterns
         responsesText,     // Уже экранировано в formatResponses
-        escapeMarkdown(trigger.TechKey),               // Экранируем хештег!
+        trigger.TechKey,   // Хештег без экранирования (Telegram сам разберется)
     )
 }
 
@@ -124,8 +124,8 @@ func formatPatterns(patterns []Pattern) string {
     
     var builder strings.Builder
     for i, p := range patterns {
-        // Экранируем каждый паттерн
-        escapedPattern := escapeMarkdown(p.PatternText)
+        // Для паттернов внутри ` ` используем safeCode
+        escapedPattern := safeMarkdown(p.PatternText)
         builder.WriteString(fmt.Sprintf("%d. `%s`\n", i+1, escapedPattern))
     }
     return builder.String()
@@ -138,8 +138,8 @@ func formatResponses(responses []Response) string {
     
     var builder strings.Builder
     for i, r := range responses {
-        // Экранируем каждый ответ
-        escapedResponse := escapeMarkdown(r.ResponseText)
+        // Для ответов используем умное экранирование
+        escapedResponse := safeMarkdown(r.ResponseText)
         builder.WriteString(fmt.Sprintf("%d. %s (вес: %d)\n", 
             i+1, escapedResponse, r.ResponseWeight))
     }

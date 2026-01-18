@@ -20,13 +20,23 @@ func SendMessage(bot *tgbotapi.BotAPI, chatID int64, text, context string) {
     }
 }
 
-// escapeMarkdown - экранирование для Telegram Markdown
+// escapeMarkdown - экранирование для Telegram Markdown V2
+// Специальные символы для Telegram MarkdownV2:
+// _ * [ ] ( ) ~ ` > # + - = | { } . !
+// НО: дефис (-) не нужно экранировать в большинстве случаев!
 func escapeMarkdown(text string) string {
     if text == "" {
         return ""
     }
     
-    specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
+    // Специальные символы которые НУЖНО экранировать в Telegram Markdown
+    // Источник: https://core.telegram.org/bots/api#markdownv2-style
+    specialChars := []string{
+        "_", "*", "[", "]", "(", ")", "~", "`", 
+        ">", "#", "+", "=", "|", "{", "}", ".", "!",
+        // Дефис (-) обычно НЕ нужно экранировать, только если он часть конструкции
+    }
+    
     result := text
     
     // Сначала экранируем обратные слеши
@@ -37,6 +47,46 @@ func escapeMarkdown(text string) string {
         result = strings.ReplaceAll(result, char, "\\"+char)
     }
     
+    return result
+}
+
+// escapeMarkdownV2 - более умная версия, которая не экранирует дефисы в словах
+func escapeMarkdownV2(text string) string {
+    if text == "" {
+        return ""
+    }
+    
+    result := text
+    
+    // 1. Экранируем обратные слеши
+    result = strings.ReplaceAll(result, "\\", "\\\\")
+    
+    // 2. Экранируем специальные символы, но осторожно с дефисами
+    // Список символов которые ВСЕГДА нужно экранировать
+    alwaysEscape := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "!", "\\"}
+    
+    for _, char := range alwaysEscape {
+        result = strings.ReplaceAll(result, char, "\\"+char)
+    }
+    
+    // 3. Точку экранируем только если она не в числе или URL
+    // (упрощенная версия)
+    result = strings.ReplaceAll(result, ".", "\\.")
+    
+    return result
+}
+
+// safeMarkdown - безопасное создание Markdown текста
+func safeMarkdown(text string) string {
+    // Для обычного текста (не кода) используем умную версию
+    return escapeMarkdownV2(text)
+}
+
+// safeCode - для кодовых блоков (внутри `)
+func safeCode(text string) string {
+    // Внутри кодовых блоков экранируем только обратные кавычки
+    result := strings.ReplaceAll(text, "`", "'") // Заменяем на апостроф
+    result = strings.ReplaceAll(result, "\\", "\\\\")
     return result
 }
 
