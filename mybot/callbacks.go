@@ -13,7 +13,9 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQ
 	log.Printf("🔄 Callback запрос от @%s (data: %s)", 
 		callbackQuery.From.UserName, callbackQuery.Data)
 	
-	// Маршрутизируем callback по его data
+	// ===============================================
+	// МАРШРУТИЗАЦИЯ ПО TИПУ CALLBACK
+	// ===============================================
 	switch callbackQuery.Data {
 	case "refresh_triggers":
 		handleRefreshCallback(bot, callbackQuery, db)
@@ -21,13 +23,14 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQ
 		handleShowTriggersCallback(bot, callbackQuery, db)
 	default:
 		log.Printf("⚠️ Неизвестный callback_data: %s", callbackQuery.Data)
-		// Можно отправить уведомление пользователю
 		callback := tgbotapi.NewCallback(callbackQuery.ID, "❌ Неизвестная команда")
 		bot.Request(callback)
 	}
 }
 
-// handleRefreshCallback - обработка нажатия кнопки обновления триггеров
+// ===============================================
+// ОБНОВЛЕНИЕ ТРИГГЕРОВ
+// ===============================================
 func handleRefreshCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
 	// Убираем "часики" в клиенте Telegram
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
@@ -38,14 +41,18 @@ func handleRefreshCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	log.Printf("🔄 Нажата кнопка обновления триггеров от @%s", 
 		callbackQuery.From.UserName)
 
-	// Проверяем, что это личный чат (как договорились)
+	// ===============================================
+	// 1. ПРОВЕРКА: ТОЛЬКО ЛИЧНЫЙ ЧАТ
+	// ===============================================
 	if callbackQuery.Message.Chat.Type != "private" {
 		log.Printf("⚠️ Callback из группы, игнорируем: chat_id=%d", 
 			callbackQuery.Message.Chat.ID)
 		return
 	}
 
-	// Создаем виртуальное сообщение для вызова существующей логики
+	// ===============================================
+	// 2. ВЫЗОВ СУЩЕСТВУЮЩЕЙ ЛОГИКИ
+	// ===============================================
 	virtualMsg := &tgbotapi.Message{
 		MessageID: callbackQuery.Message.MessageID,
 		From:      callbackQuery.From,
@@ -54,13 +61,14 @@ func handleRefreshCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		Date:      callbackQuery.Message.Date,
 	}
 
-	// Вызываем существующую логику обновления триггеров
 	handleRefreshMeCommand(bot, virtualMsg, db)
 
 	log.Printf("✅ Callback обработан для @%s", callbackQuery.From.UserName)
 }
 
-// handleShowTriggersCallback - обработка нажатия кнопки показа триггеров
+// ===============================================
+// ПОКАЗ СПИСКА ТРИГГЕРОВ
+// ===============================================
 func handleShowTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
 	// Убираем "часики" в клиенте Telegram
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
@@ -71,14 +79,18 @@ func handleShowTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 	log.Printf("📋 Нажата кнопка показа триггеров от @%s", 
 		callbackQuery.From.UserName)
 
-	// Проверяем, что это личный чат
+	// ===============================================
+	// 1. ПРОВЕРКА: ТОЛЬКО ЛИЧНЫЙ ЧАТ
+	// ===============================================
 	if callbackQuery.Message.Chat.Type != "private" {
 		log.Printf("⚠️ Callback из группы, игнорируем: chat_id=%d", 
 			callbackQuery.Message.Chat.ID)
 		return
 	}
 
-	// Получаем текущую конфигурацию триггеров
+	// ===============================================
+	// 2. ПОЛУЧЕНИЕ КОНФИГУРАЦИИ
+	// ===============================================
 	config := GetTriggerConfig()
 	if config == nil || len(config) == 0 {
 		log.Println("⚠️ Конфигурация триггеров пуста")
@@ -90,15 +102,14 @@ func handleShowTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 
 	log.Printf("📊 Показываю %d триггеров для @%s", len(config), callbackQuery.From.UserName)
 
-	// Формируем список триггеров (только список, без статистики)
+	// ===============================================
+	// 3. ФОРМИРОВАНИЕ СПИСКА
+	// ===============================================
 	listText := formatTriggersList(config)
 
-	// Отправляем заголовок
-	sendMessage(bot, callbackQuery.Message.Chat.ID, 
-		"📋 Список по приоритету:", 
-		"заголовок списка триггеров")
-
-	// Отправляем список (разбиваем если длинный)
+	// ===============================================
+	// 4. ОТПРАВКА СПИСКА (РАЗБИВАЕМ ЕСЛИ ДЛИННЫЙ)
+	// ===============================================
 	maxMsgLength := 4000 // Оставляем запас от 4096
 	listParts := splitLongMessage(listText, maxMsgLength)
 
