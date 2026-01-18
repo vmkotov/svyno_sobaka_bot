@@ -87,10 +87,33 @@ func formatTriggerButton(trigger Trigger, number int) string {
 func createNavigationButtons(currentPage, totalTriggers int) []tgbotapi.InlineKeyboardButton {
 	var buttons []tgbotapi.InlineKeyboardButton
 	
-	// Проверяем, есть ли следующая страница
+	// Рассчитываем общее количество страниц
 	totalPages := (totalTriggers + triggersPerPage - 1) / triggersPerPage
+	
+	// Определяем, какие кнопки показывать
+	hasPrevPage := currentPage > 0
 	hasNextPage := (currentPage+1) < totalPages
 	
+	// Если всего одна страница - не показываем навигацию
+	if totalPages <= 1 {
+		return buttons
+	}
+	
+	// Кнопка "Назад" (если не первая страница)
+	if hasPrevPage {
+		callbackData := fmt.Sprintf("triggers_page:%d", currentPage-1)
+		button := tgbotapi.NewInlineKeyboardButtonData("⏪ Назад", callbackData)
+		buttons = append(buttons, button)
+	}
+	
+	// Кнопка "Главная" (если не на главной странице)
+	if currentPage != 0 {
+		callbackData := "triggers_page:0"
+		button := tgbotapi.NewInlineKeyboardButtonData("🏠 Главная", callbackData)
+		buttons = append(buttons, button)
+	}
+	
+	// Кнопка "Далее" (если не последняя страница)
 	if hasNextPage {
 		callbackData := fmt.Sprintf("triggers_page:%d", currentPage+1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏩ Далее", callbackData)
