@@ -184,14 +184,14 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 			"🎯 *Найденные паттерны:* %v\n"+
 			"📊 *Всего паттернов:* %d\n"+
 			"💬 *Ответ:* %s",
-		escapeMarkdown(trigger.TriggerName),
+		escapeMarkdownForLog(trigger.TriggerName),
 		reactionStatus,
-		escapeMarkdown(msg.Text),
-		escapeMarkdown(msg.From.FirstName),
+		escapeMarkdownForLog(msg.Text),
+		escapeMarkdownForLog(msg.From.FirstName),
 		msg.Chat.ID,
 		patternsForLog,
 		len(foundPatterns),
-		escapeMarkdown(responseText),
+		escapeMarkdownForLog(responseText),
 	)
 
 	// Добавляем хеш-тег БЕЗ Markdown форматирования (просто текст)
@@ -203,5 +203,28 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 
 	if _, err := bot.Send(logMsg); err != nil {
 		log.Printf("❌ Ошибка отправки лога триггера: %v", err)
+		// Попробуем отправить без Markdown
+		logMsg.ParseMode = ""
+		if _, err2 := bot.Send(logMsg); err2 != nil {
+			log.Printf("❌ Ошибка даже без Markdown: %v", err2)
+		}
 	}
+}
+
+// escapeMarkdownForLog - безопасное экранирование для логов
+// Отличается от обычного escapeMarkdown - не экранирует дефисы и точки
+func escapeMarkdownForLog(text string) string {
+	if text == "" {
+		return ""
+	}
+	
+	// Минимальный набор символов для экранирования в логах
+	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "!", "\\"}
+	
+	result := text
+	for _, char := range specialChars {
+		result = strings.ReplaceAll(result, char, "\\"+char)
+	}
+	
+	return result
 }

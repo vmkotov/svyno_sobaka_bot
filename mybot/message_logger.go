@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -14,8 +15,14 @@ func SendMessageLog(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, botUsername str
 	// ID чата для логов (фиксированный)
 	logChatID := int64(-1003516004835)
 
-	// Формируем лог
+	// Формируем лог с проверкой UTF-8
 	logText := formatMessageLog(msg, botUsername, botID)
+	
+	// Проверяем что текст в UTF-8
+	if !utf8.ValidString(logText) {
+		log.Printf("⚠️ Текст лога не в UTF-8, очищаю...")
+		logText = cleanUTF8(logText)
+	}
 
 	// Создаем сообщение для отправки
 	logMsg := tgbotapi.NewMessage(logChatID, logText)
@@ -25,9 +32,31 @@ func SendMessageLog(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, botUsername str
 	// Отправляем лог
 	if _, err := bot.Send(logMsg); err != nil {
 		log.Printf("❌ Ошибка отправки лога: %v", err)
+		// Пробуем без Markdown
+		logMsg.ParseMode = ""
+		if _, err2 := bot.Send(logMsg); err2 != nil {
+			log.Printf("❌ Ошибка даже без Markdown: %v", err2)
+		}
 	} else {
 		log.Printf("✅ Лог отправлен в чат %d", logChatID)
 	}
+}
+
+// cleanUTF8 очищает строку от невалидных UTF-8 символов
+func cleanUTF8(s string) string {
+	var result strings.Builder
+	
+	for i, r := range s {
+		if r == utf8.RuneError {
+			// Заменяем невалидные символы на ?
+			result.WriteRune('?')
+			log.Printf("  Заменен невалидный символ на позиции %d", i)
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	
+	return result.String()
 }
 
 // formatMessageLog формирует форматированный текст лога
@@ -41,7 +70,7 @@ func formatMessageLog(msg *tgbotapi.Message, botUsername string, botID int64) st
 
 	// Информация о чате
 	chatTitle := getValueOrDefault(msg.Chat.Title, "не указано")
-	builder.WriteString(fmt.Sprintf("💬 *Чат:* %s\n", escapeMarkdown(chatTitle)))
+	builder.WriteString(fmt.Sprintf("💬 *Чат:* %s\n", escapeMarkdownForLog(chatTitle)))
 
 	// Тип чата (перевод на русский)
 	chatType := translateChatType(msg.Chat.Type)
@@ -57,16 +86,16 @@ func formatMessageLog(msg *tgbotapi.Message, botUsername string, botID int64) st
 		if fullName == "" {
 			fullName = "не указано"
 		}
-		builder.WriteString(fmt.Sprintf("👤 *Пользователь:* %s\n", escapeMarkdown(fullName)))
+		builder.WriteString(fmt.Sprintf("👤 *Пользователь:* %s\n", escapeMarkdownForLog(fullName)))
 
 		// Только имя
 		firstName := getValueOrDefault(msg.From.FirstName, "не указано")
-		builder.WriteString(fmt.Sprintf("📛 *Имя:* %s\n", escapeMarkdown(firstName)))
+		builder.WriteString(fmt.Sprintf("📛 *Имя:* %s\n", escapeMarkdownForLog(firstName)))
 
 		// Username
 		username := getValueOrDefault(msg.From.UserName, "не указано")
 		if username != "не указано" {
-			builder.WriteString(fmt.Sprintf("👤 *@%s*\n", escapeMarkdown(username)))
+			builder.WriteString(fmt.Sprintf("👤 *@%s*\n", escapeMarkdownForLog(username)))
 		}
 
 		builder.WriteString(fmt.Sprintf("🆔 *ID:* `%d`\n\n", msg.From.ID))
@@ -74,7 +103,7 @@ func formatMessageLog(msg *tgbotapi.Message, botUsername string, botID int64) st
 
 	// Текст сообщения или подпись
 	messageText := getMessageText(msg)
-	builder.WriteString(fmt.Sprintf("📝 *Сообщение:*\n```\n%s\n```\n\n", messageText))
+	builder.WriteString(fmt.Sprintf("📝 *Сообщение:*\n```\n%s\n```\n\n", escapeMarkdownForLog(messageText)))
 
 	// Информация о боте
 	builder.WriteString(fmt.Sprintf("🤖 *Информация о боте:*\n"))
