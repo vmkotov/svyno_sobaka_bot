@@ -104,7 +104,7 @@ func formatTriggerDetail(trigger *Trigger) string {
         "📊 Паттернов: %d | Ответов: %d\n\n"+
         "🔍 *Паттерны:*\n%s\n\n"+
         "💬 *Ответы:*\n%s\n\n"+
-        "#%s",
+        "Ключ: `%s`",
         safeMarkdown(trigger.TriggerName),           // Умное экранирование
         safeMarkdown(trigger.TechKey),               // Умное экранирование
         trigger.Priority,
@@ -113,7 +113,7 @@ func formatTriggerDetail(trigger *Trigger) string {
         len(trigger.Responses),
         patternsText,      // Уже экранировано в formatPatterns
         responsesText,     // Уже экранировано в formatResponses
-        trigger.TechKey,   // Хештег без экранирования (Telegram сам разберется)
+        safeMarkdown(trigger.TechKey),   // Tech key в кодовом блоке
     )
 }
 
