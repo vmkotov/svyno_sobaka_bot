@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"svyno_sobaka_bot/mybot/ui"  // Импортируем только UI функции
 )
 
 // HandleCallbackQuery - обрабатывает callback-запросы от inline-кнопок
@@ -58,7 +59,7 @@ func handleMenuCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 	switch parts[1] {
 	case "main":
 		log.Printf("🏠 Показать главное меню для @%s", callbackQuery.From.UserName)
-		editMessageToMainMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
+		ui.EditMessageToMainMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 	default:
 		log.Printf("⚠️ Неизвестный тип меню: %s", parts[1])
 	}
@@ -110,8 +111,8 @@ func handleShowTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callba
 		return
 	}
 
-	// Генерируем меню первой страницы
-	menuText, menuKeyboard := generateTriggersMenu(0)
+	// Генерируем меню первой страницы (функция из того же пакета mybot)
+	menuText, menuKeyboard := GenerateTriggersMenu(0)
 
 	// Отправляем меню
 	msg := tgbotapi.NewMessage(callbackQuery.Message.Chat.ID, menuText)
@@ -130,8 +131,8 @@ func handleTriggersPage(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 	log.Printf("📋 Показать страницу триггеров %d для @%s", 
 		page, callbackQuery.From.UserName)
 	
-	// Генерируем меню для запрошенной страницы
-	menuText, menuKeyboard := generateTriggersMenu(page)
+	// Генерируем меню для запрошенной страницы (функция из того же пакета mybot)
+	menuText, menuKeyboard := GenerateTriggersMenu(page)
 	
 	// Редактируем сообщение
 	msg := tgbotapi.NewEditMessageTextAndMarkup(

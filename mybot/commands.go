@@ -6,15 +6,16 @@ import (
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"svyno_sobaka_bot/mybot/ui"  // Импортируем UI пакет
 )
 
 // handleCommand - определяет команду и вызывает соответствующий обработчик
 func handleCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB) {
 	switch msg.Command() {
 	case "start":
-		handleStartCommand(bot, msg)
+		ui.HandleStartCommand(bot, msg)
 	case "help":
-		handleHelpCommand(bot, msg)
+		ui.HandleHelpCommand(bot, msg)
 	case "refresh_me": // ← НОВАЯ КОМАНДА
 		handleRefreshMeCommand(bot, msg, db)
 		// Можно добавить другие команды
@@ -28,14 +29,14 @@ func handleRefreshMeCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql
 	// Проверяем подключение к БД
 	if db == nil {
 		log.Println("⚠️ БД не подключена, не могу обновить триггеры")
-		sendMessage(bot, msg.Chat.ID, "❌ БД не подключена", "ошибка")
+		ui.SendMessage(bot, msg.Chat.ID, "❌ БД не подключена", "ошибка")
 		return
 	}
 
 	// Загружаем конфигурацию
 	if err := LoadTriggerConfig(db); err != nil {
 		log.Printf("❌ Ошибка загрузки триггеров: %v", err)
-		sendMessage(bot, msg.Chat.ID, "❌ Ошибка обновления триггеров", "ошибка")
+		ui.SendMessage(bot, msg.Chat.ID, "❌ Ошибка обновления триггеров", "ошибка")
 		return
 	}
 
@@ -43,21 +44,21 @@ func handleRefreshMeCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql
 	config := GetTriggerConfig()
 	if config == nil || len(config) == 0 {
 		log.Println("⚠️ Конфигурация триггеров пуста после загрузки")
-		sendMessage(bot, msg.Chat.ID, "✅ Триггеры обновлены!\n⚠️ Но список пуст", "refresh_me")
+		ui.SendMessage(bot, msg.Chat.ID, "✅ Триггеры обновлены!\n⚠️ Но список пуст", "refresh_me")
 		return
 	}
 
 	log.Println("✅ Триггеры перезагружены из БД")
 
 	// 1. Отправляем сообщение об успехе
-	sendMessage(bot, msg.Chat.ID, "✅ Триггеры обновлены!", "refresh_me")
+	ui.SendMessage(bot, msg.Chat.ID, "✅ Триггеры обновлены!", "refresh_me")
 
 	// 2. Формируем статистику и список
 	statsText := formatTriggerStats(config)
 	listText := formatTriggersList(config)
 
 	// 3. Отправляем статистику
-	sendMessage(bot, msg.Chat.ID, statsText, "статистика триггеров")
+	ui.SendMessage(bot, msg.Chat.ID, statsText, "статистика триггеров")
 
 	// 4. Отправляем список (разбиваем если длинный)
 	maxMsgLength := 4000 // Оставляем запас от 4096
@@ -68,6 +69,6 @@ func handleRefreshMeCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql
 		if len(listParts) > 1 {
 			context = fmt.Sprintf("список триггеров (часть %d/%d)", i+1, len(listParts))
 		}
-		sendMessage(bot, msg.Chat.ID, part, context)
+		ui.SendMessage(bot, msg.Chat.ID, part, context)
 	}
 }

@@ -154,7 +154,7 @@ func processChat(bot *tgbotapi.BotAPI, chatID int64, finalName string, wg *sync.
 	chatLog := fmt.Sprintf("Чат %d", chatID)
 
 	// 1. Первое сообщение - используем существующую sendMessage
-	sendMessage(bot, chatID,
+	SendMessage(bot, chatID,
 		"🔍 Идёт сканирование пользователей чата на наличие свинособаки",
 		"первое сообщение рассылки")
 
@@ -178,7 +178,7 @@ func processChat(bot *tgbotapi.BotAPI, chatID int64, finalName string, wg *sync.
 		phrase1[:min(30, len(phrase1))]+"...",
 		phrase2[:min(30, len(phrase2))]+"...")
 
-	sendMessage(bot, chatID, msgText, "второе сообщение рассылки")
+	SendMessage(bot, chatID, msgText, "второе сообщение рассылки")
 
 	results <- fmt.Sprintf("✅ %s: успешно отправлено", chatLog)
 }

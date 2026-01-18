@@ -12,9 +12,9 @@ const (
 	maxNameLength   = 25 // Максимальная длина названия в кнопке
 )
 
-// generateTriggersMenu создает меню с триггерами для указанной страницы
+// GenerateTriggersMenu создает меню с триггерами для указанной страницы
 // Возвращает текст сообщения и inline-клавиатуру
-func generateTriggersMenu(page int) (string, tgbotapi.InlineKeyboardMarkup) {
+func GenerateTriggersMenu(page int) (string, tgbotapi.InlineKeyboardMarkup) {
 	// Получаем текущую конфигурацию
 	config := GetTriggerConfig()
 	if config == nil || len(config) == 0 {
