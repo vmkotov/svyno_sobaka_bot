@@ -49,15 +49,15 @@ func generateTriggersMenu(page int) (string, tgbotapi.InlineKeyboardMarkup) {
 		// Форматируем текст кнопки
 		buttonText := formatTriggerButton(trigger, triggerNum)
 		
-		// Создаем callback_data
-		callbackData := fmt.Sprintf("trigger_info:%s", trigger.TechKey)
+		// Создаем callback_data по новой системе
+		callbackData := fmt.Sprintf("trigger:detail:%s", trigger.TechKey)
 		
 		// Создаем кнопку (одна кнопка в ряд)
 		button := tgbotapi.NewInlineKeyboardButtonData(buttonText, callbackData)
 		buttonRows = append(buttonRows, tgbotapi.NewInlineKeyboardRow(button))
 	}
 
-	// Добавляем навигацию (если нужно)
+	// Добавляем навигацию (всегда показываем "Главная")
 	navRow := createNavigationButtons(page, totalTriggers)
 	if len(navRow) > 0 {
 		buttonRows = append(buttonRows, navRow)
@@ -94,28 +94,21 @@ func createNavigationButtons(currentPage, totalTriggers int) []tgbotapi.InlineKe
 	hasPrevPage := currentPage > 0
 	hasNextPage := (currentPage+1) < totalPages
 	
-	// Если всего одна страница - не показываем навигацию
-	if totalPages <= 1 {
-		return buttons
-	}
-	
 	// Кнопка "Назад" (если не первая страница)
 	if hasPrevPage {
-		callbackData := fmt.Sprintf("triggers_page:%d", currentPage-1)
+		callbackData := fmt.Sprintf("triggers:page:%d", currentPage-1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏪ Назад", callbackData)
 		buttons = append(buttons, button)
 	}
 	
-	// Кнопка "Главная" (если не на главной странице)
-	if currentPage != 0 {
-		callbackData := "triggers_page:0"
-		button := tgbotapi.NewInlineKeyboardButtonData("🏠 Главная", callbackData)
-		buttons = append(buttons, button)
-	}
+	// Кнопка "Главная" (ВСЕГДА показываем!)
+	callbackData := "menu:main"
+	button := tgbotapi.NewInlineKeyboardButtonData("🏠 Главная", callbackData)
+	buttons = append(buttons, button)
 	
 	// Кнопка "Далее" (если не последняя страница)
 	if hasNextPage {
-		callbackData := fmt.Sprintf("triggers_page:%d", currentPage+1)
+		callbackData := fmt.Sprintf("triggers:page:%d", currentPage+1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏩ Далее", callbackData)
 		buttons = append(buttons, button)
 	}

@@ -1,7 +1,6 @@
 package mybot
 
 import (
-	"fmt"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -9,30 +8,10 @@ import (
 
 // handleStartCommand - обработка команды /start
 func handleStartCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	text := fmt.Sprintf(
-		"Привет! Я бот-свинособака 🐷🐶\n"+
-			"Выберите действие:",
-	)
-
-	// Создаем сообщение
-	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+	log.Printf("🚀 Команда /start от @%s", msg.From.UserName)
 	
-	// Создаем inline-клавиатуру с ДВУМЯ кнопками
-	refreshButton := tgbotapi.NewInlineKeyboardButtonData("🔄 Обновить триггеры", "refresh_triggers")
-	showButton := tgbotapi.NewInlineKeyboardButtonData("📋 Триггеры", "show_triggers")
-	
-	// Две кнопки в один ряд
-	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(refreshButton, showButton),
-	)
-	reply.ReplyMarkup = inlineKeyboard
-
-	// Отправляем сообщение с кнопками
-	if _, err := bot.Send(reply); err != nil {
-		log.Printf("❌ Ошибка отправки стартового сообщения: %v", err)
-	} else {
-		log.Printf("✅ Стартовое сообщение с кнопками отправлено для @%s", msg.From.UserName)
-	}
+	// Используем универсальную функцию главного меню
+	sendMainMenu(bot, msg.Chat.ID)
 }
 
 // handleHelpCommand - обработка команды /help
