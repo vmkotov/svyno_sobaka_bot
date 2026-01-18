@@ -9,27 +9,29 @@ import (
 
 // handleStartCommand - обработка команды /start
 func handleStartCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	// Убрали неиспользуемую переменную name
 	text := fmt.Sprintf(
 		"Привет! Я бот-свинособака 🐷🐶\n"+
-			"Для перезагрузки триггеров из БД нажми кнопку:",
+			"Выберите действие:",
 	)
 
 	// Создаем сообщение
 	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
 	
-	// Добавляем inline-кнопку
+	// Создаем inline-клавиатуру с ДВУМЯ кнопками
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData("🔄 Обновить триггеры", "refresh_triggers")
+	showButton := tgbotapi.NewInlineKeyboardButtonData("📋 Триггеры", "show_triggers")
+	
+	// Две кнопки в один ряд
 	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(refreshButton),
+		tgbotapi.NewInlineKeyboardRow(refreshButton, showButton),
 	)
 	reply.ReplyMarkup = inlineKeyboard
 
-	// Отправляем сообщение с кнопкой
+	// Отправляем сообщение с кнопками
 	if _, err := bot.Send(reply); err != nil {
 		log.Printf("❌ Ошибка отправки стартового сообщения: %v", err)
 	} else {
-		log.Printf("✅ Стартовое сообщение с кнопкой отправлено для @%s", msg.From.UserName)
+		log.Printf("✅ Стартовое сообщение с кнопками отправлено для @%s", msg.From.UserName)
 	}
 }
 
