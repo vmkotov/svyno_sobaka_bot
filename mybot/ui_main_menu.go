@@ -1,4 +1,4 @@
-package ui
+package mybot
 
 import (
 	"fmt"
@@ -11,16 +11,16 @@ import (
 func SendMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
 	text := fmt.Sprintf(
 		"Привет! Я бот-свинособака 🐷🐶\n" +
-		"Выберите действие:",
+			"Выберите действие:",
 	)
 
 	// Создаем сообщение
 	reply := tgbotapi.NewMessage(chatID, text)
-	
+
 	// Создаем inline-клавиатуру с двумя кнопками
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData("🔄 Обновить триггеры", "refresh:triggers")
 	showButton := tgbotapi.NewInlineKeyboardButtonData("📋 Триггеры", "triggers:list")
-	
+
 	// Две кнопки в один ряд
 	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(refreshButton, showButton),
@@ -39,7 +39,7 @@ func SendMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
 func EditMessageToMainMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	text := fmt.Sprintf(
 		"Привет! Я бот-свинособака 🐷🐶\n" +
-		"Выберите действие:",
+			"Выберите действие:",
 	)
 
 	// Создаем inline-клавиатуру

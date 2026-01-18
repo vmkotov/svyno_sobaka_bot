@@ -24,7 +24,7 @@ func GenerateTriggersMenu(page int) (string, tgbotapi.InlineKeyboardMarkup) {
 	totalTriggers := len(config)
 	startIdx := page * triggersPerPage
 	endIdx := startIdx + triggersPerPage
-	
+
 	// Проверяем границы
 	if startIdx >= totalTriggers {
 		startIdx = 0
@@ -36,22 +36,22 @@ func GenerateTriggersMenu(page int) (string, tgbotapi.InlineKeyboardMarkup) {
 	}
 
 	// Формируем заголовок
-	header := fmt.Sprintf("📋 Триггеры %d-%d из %d:\n\n", 
+	header := fmt.Sprintf("📋 Триггеры %d-%d из %d:\n\n",
 		startIdx+1, endIdx, totalTriggers)
 
 	// Создаем кнопки для триггеров текущей страницы
 	var buttonRows [][]tgbotapi.InlineKeyboardButton
-	
+
 	for i := startIdx; i < endIdx; i++ {
 		trigger := config[i]
 		triggerNum := i + 1
-		
+
 		// Форматируем текст кнопки
 		buttonText := formatTriggerButton(trigger, triggerNum)
-		
+
 		// Создаем callback_data по новой системе
 		callbackData := fmt.Sprintf("trigger:detail:%s", trigger.TechKey)
-		
+
 		// Создаем кнопку (одна кнопка в ряд)
 		button := tgbotapi.NewInlineKeyboardButtonData(buttonText, callbackData)
 		buttonRows = append(buttonRows, tgbotapi.NewInlineKeyboardRow(button))
@@ -73,45 +73,45 @@ func formatTriggerButton(trigger Trigger, number int) string {
 	if len(displayName) > maxNameLength {
 		displayName = displayName[:maxNameLength-3] + "..."
 	}
-	
+
 	// Статистика триггера
 	patternsCount := len(trigger.Patterns)
 	responsesCount := len(trigger.Responses)
 	probability := int(trigger.Probability * 100)
-	
-	return fmt.Sprintf("%d. %s (%d%%, %d, %d)", 
+
+	return fmt.Sprintf("%d. %s (%d%%, %d, %d)",
 		number, displayName, probability, patternsCount, responsesCount)
 }
 
 // createNavigationButtons создает кнопки навигации
 func createNavigationButtons(currentPage, totalTriggers int) []tgbotapi.InlineKeyboardButton {
 	var buttons []tgbotapi.InlineKeyboardButton
-	
+
 	// Рассчитываем общее количество страниц
 	totalPages := (totalTriggers + triggersPerPage - 1) / triggersPerPage
-	
+
 	// Определяем, какие кнопки показывать
 	hasPrevPage := currentPage > 0
-	hasNextPage := (currentPage+1) < totalPages
-	
+	hasNextPage := (currentPage + 1) < totalPages
+
 	// Кнопка "Назад" (если не первая страница)
 	if hasPrevPage {
 		callbackData := fmt.Sprintf("triggers:page:%d", currentPage-1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏪ Назад", callbackData)
 		buttons = append(buttons, button)
 	}
-	
+
 	// Кнопка "Главная" (ВСЕГДА показываем!)
 	callbackData := "menu:main"
 	button := tgbotapi.NewInlineKeyboardButtonData("🏠 Главная", callbackData)
 	buttons = append(buttons, button)
-	
+
 	// Кнопка "Далее" (если не последняя страница)
 	if hasNextPage {
 		callbackData := fmt.Sprintf("triggers:page:%d", currentPage+1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏩ Далее", callbackData)
 		buttons = append(buttons, button)
 	}
-	
+
 	return buttons
 }

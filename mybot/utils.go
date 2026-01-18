@@ -1,30 +1,63 @@
 package mybot
 
 import (
-	"log"
-	"strings"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+    "fmt"
+    "strings"
+    "time"
 )
 
-// SendMessage - общая функция отправки сообщений
-// Может использоваться любым модулем (broadcast, commands и т.д.)
-func SendMessage(bot *tgbotapi.BotAPI, chatID int64, text, context string) {
-	reply := tgbotapi.NewMessage(chatID, text)
+// ================= ОБЩИЕ УТИЛИТЫ =================
 
-	if _, err := bot.Send(reply); err != nil {
-		log.Printf("❌ Ошибка отправки %s: %v", context, err)
-	} else {
-		log.Printf("✅ Отправлен %s", context)
-	}
+// FormatDuration - форматирование времени
+func FormatDuration(d time.Duration) string {
+    if d < time.Second {
+        return fmt.Sprintf("%dms", d.Milliseconds())
+    }
+    if d < time.Minute {
+        return fmt.Sprintf("%.1fs", d.Seconds())
+    }
+    return fmt.Sprintf("%.1fmin", d.Minutes())
 }
 
-// escapeMarkdown экранирует символы Markdown (общая функция)
-func escapeMarkdown(text string) string {
-	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
-	result := text
-	for _, char := range specialChars {
-		result = strings.ReplaceAll(result, char, "\\"+char)
-	}
-	return result
+// TruncateString - обрезание строки
+func TruncateString(s string, maxLen int) string {
+    if len(s) <= maxLen {
+        return s
+    }
+    return s[:maxLen-3] + "..."
+}
+
+// ContainsAny - проверка содержит ли строка любую из подстрок
+func ContainsAny(s string, substrings []string) bool {
+    for _, sub := range substrings {
+        if strings.Contains(s, sub) {
+            return true
+        }
+    }
+    return false
+}
+
+// UniqueStrings - удаление дубликатов из слайса строк
+func UniqueStrings(items []string) []string {
+    seen := make(map[string]bool)
+    result := []string{}
+    
+    for _, item := range items {
+        if !seen[item] {
+            seen[item] = true
+            result = append(result, item)
+        }
+    }
+    
+    return result
+}
+
+// ParseBool - безопасный парсинг булевых значений
+func ParseBool(s string) bool {
+    switch strings.ToLower(s) {
+    case "true", "1", "yes", "y", "on":
+        return true
+    default:
+        return false
+    }
 }

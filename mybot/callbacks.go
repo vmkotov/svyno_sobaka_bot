@@ -7,24 +7,23 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"svyno_sobaka_bot/mybot/ui"  // Импортируем только UI функции
 )
 
 // HandleCallbackQuery - обрабатывает callback-запросы от inline-кнопок
 func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
-	log.Printf("🔄 Callback запрос от @%s (data: %s)", 
+	log.Printf("🔄 Callback запрос от @%s (data: %s)",
 		callbackQuery.From.UserName, callbackQuery.Data)
-	
+
 	// ===============================================
 	// ПАРСИНГ ПО НОВОЙ СИСТЕМЕ
 	// ===============================================
 	parts := parseCallbackData(callbackQuery.Data)
-	
+
 	if len(parts) == 0 {
 		handleLegacyCallback(bot, callbackQuery, db)
 		return
 	}
-	
+
 	// Роутинг по первой части (тип)
 	switch parts[0] {
 	case "menu":
@@ -32,7 +31,7 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQ
 	case "triggers":
 		handleTriggersCallback(bot, callbackQuery, parts, db)
 	case "trigger":
-		handleSingleTriggerCallback(bot, callbackQuery, parts)
+		handleSingleTriggerCallback(bot, callbackQuery, parts, db)
 	case "refresh":
 		handleRefreshCallback(bot, callbackQuery, parts, db)
 	default:
@@ -49,17 +48,17 @@ func handleMenuCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 	if _, err := bot.Request(callback); err != nil {
 		log.Printf("⚠️ Ошибка AnswerCallbackQuery: %v", err)
 	}
-	
+
 	// Вторая часть - тип меню
 	if len(parts) < 2 {
 		log.Printf("⚠️ Неполный callback_data для меню: %v", parts)
 		return
 	}
-	
+
 	switch parts[1] {
 	case "main":
 		log.Printf("🏠 Показать главное меню для @%s", callbackQuery.From.UserName)
-		ui.EditMessageToMainMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
+		EditMessageToMainMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 	default:
 		log.Printf("⚠️ Неизвестный тип меню: %s", parts[1])
 	}
@@ -74,12 +73,12 @@ func handleTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callba
 	if _, err := bot.Request(callback); err != nil {
 		log.Printf("⚠️ Ошибка AnswerCallbackQuery: %v", err)
 	}
-	
+
 	if len(parts) < 2 {
 		log.Printf("⚠️ Неполный callback_data для триггеров: %v", parts)
 		return
 	}
-	
+
 	switch parts[1] {
 	case "list":
 		// Показать первую страницу триггеров
@@ -106,7 +105,7 @@ func handleTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callba
 func handleShowTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
 	// Проверяем, что это личный чат
 	if callbackQuery.Message.Chat.Type != "private" {
-		log.Printf("⚠️ Callback из группы, игнорируем: chat_id=%d", 
+		log.Printf("⚠️ Callback из группы, игнорируем: chat_id=%d",
 			callbackQuery.Message.Chat.ID)
 		return
 	}
@@ -128,12 +127,12 @@ func handleShowTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callba
 
 // handleTriggersPage обрабатывает переход по страницам триггеров
 func handleTriggersPage(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, page int) {
-	log.Printf("📋 Показать страницу триггеров %d для @%s", 
+	log.Printf("📋 Показать страницу триггеров %d для @%s",
 		page, callbackQuery.From.UserName)
-	
+
 	// Генерируем меню для запрошенной страницы (функция из того же пакета mybot)
 	menuText, menuKeyboard := GenerateTriggersMenu(page)
-	
+
 	// Редактируем сообщение
 	msg := tgbotapi.NewEditMessageTextAndMarkup(
 		callbackQuery.Message.Chat.ID,
@@ -141,7 +140,7 @@ func handleTriggersPage(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 		menuText,
 		menuKeyboard,
 	)
-	
+
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("❌ Ошибка редактирования меню триггеров: %v", err)
 		// Если не удалось отредактировать, отправляем новое
@@ -149,46 +148,64 @@ func handleTriggersPage(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 		newMsg.ReplyMarkup = menuKeyboard
 		bot.Send(newMsg)
 	}
-	
-	log.Printf("✅ Меню триггеров (страница %d) отправлено для @%s", 
+
+	log.Printf("✅ Меню триггеров (страница %d) отправлено для @%s",
 		page, callbackQuery.From.UserName)
 }
 
 // ===============================================
 // ОБРАБОТКА ОДНОГО ТРИГГЕРА (trigger:*)
 // ===============================================
-func handleSingleTriggerCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, parts []string) {
-	// Убираем "часики" - заглушка для первой фазы
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
-	if _, err := bot.Request(callback); err != nil {
-		log.Printf("⚠️ Ошибка AnswerCallbackQuery: %v", err)
-	}
-	
+func handleSingleTriggerCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, parts []string, db *sql.DB) {
 	if len(parts) < 3 {
 		log.Printf("⚠️ Неполный callback_data для триггера: %v", parts)
 		return
 	}
-	
+
 	switch parts[1] {
 	case "detail":
+		// Получаем триггер
 		techKey := parts[2]
-		log.Printf("🎯 Нажата кнопка триггера %s от @%s", 
+		trigger := GetTriggerByTechKey(techKey)
+
+		if trigger == nil {
+			log.Printf("❌ Триггер с ключом %s не найден", techKey)
+			callback := tgbotapi.NewCallback(callbackQuery.ID, "❌ Триггер не найден")
+			bot.Request(callback)
+			return
+		}
+
+		log.Printf("🎯 Показать детали триггера %s от @%s",
 			techKey, callbackQuery.From.UserName)
-		// В будущем здесь будет детальная информация
+
+		// Извлекаем номер страницы
+		fromPage := extractPageFromMessage(callbackQuery.Message.Text)
+
+		// Генерируем детальную карточку
+		message, keyboard := GenerateTriggerDetailCard(trigger, fromPage)
+
+		// Редактируем сообщение
+		msg := tgbotapi.NewEditMessageTextAndMarkup(
+			callbackQuery.Message.Chat.ID,
+			callbackQuery.Message.MessageID,
+			message,
+			keyboard,
+		)
+		msg.ParseMode = "Markdown"
+
+		if _, err := bot.Send(msg); err != nil {
+			log.Printf("❌ Ошибка отправки детальной карточки: %v", err)
+		}
 	default:
 		log.Printf("⚠️ Неизвестная команда триггера: %s", parts[1])
 	}
 }
-
-// ===============================================
-// ОБНОВЛЕНИЕ (refresh:*)
-// ===============================================
 func handleRefreshCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, parts []string, db *sql.DB) {
 	if len(parts) < 2 {
 		log.Printf("⚠️ Неполный callback_data для обновления: %v", parts)
 		return
 	}
-	
+
 	switch parts[1] {
 	case "triggers":
 		handleRefreshTriggersCallback(bot, callbackQuery, db)
@@ -204,12 +221,12 @@ func handleRefreshTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi
 		log.Printf("⚠️ Ошибка AnswerCallbackQuery: %v", err)
 	}
 
-	log.Printf("🔄 Нажата кнопка обновления триггеров от @%s", 
+	log.Printf("🔄 Нажата кнопка обновления триггеров от @%s",
 		callbackQuery.From.UserName)
 
 	// Проверяем, что это личный чат
 	if callbackQuery.Message.Chat.Type != "private" {
-		log.Printf("⚠️ Callback из группы, игнорируем: chat_id=%d", 
+		log.Printf("⚠️ Callback из группы, игнорируем: chat_id=%d",
 			callbackQuery.Message.Chat.ID)
 		return
 	}
@@ -223,7 +240,7 @@ func handleRefreshTriggersCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi
 		Date:      callbackQuery.Message.Date,
 	}
 
-	handleRefreshMeCommand(bot, virtualMsg, db)
+	HandleRefreshMeCommand(bot, virtualMsg, db)
 
 	log.Printf("✅ Триггеры обновлены для @%s", callbackQuery.From.UserName)
 }
