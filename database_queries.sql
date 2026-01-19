@@ -1,6 +1,7 @@
 -- ============================================
 -- DATABASE QUERIES FOR SVINO_SOBAKA_BOT
 -- Created: четверг, 15 января 2026 г. 16:47:34 (MSK)
+-- Updated: понедельник, 19 января 2026 г. (добавлены новые таблицы)
 -- ============================================
 
 -- 1. Мастер-справочник триггеров
@@ -23,6 +24,24 @@ SELECT * FROM svyno_sobaka_bot.v_active_patterns;
 
 -- 7. Активные ответы
 SELECT * FROM svyno_sobaka_bot.v_active_responses;
+
+-- 8. Пользователи Telegram (новая таблица)
+SELECT * FROM svyno_sobaka_bot.users ORDER BY user_id;
+
+-- 9. Чаты Telegram (новая таблица)
+SELECT * FROM svyno_sobaka_bot.chats ORDER BY chat_id;
+
+-- 10. Сообщения (новая таблица)
+SELECT * FROM svyno_sobaka_bot.messages ORDER BY message_date DESC LIMIT 100;
+
+-- 11. Медиафайлы сообщений (новая таблица)
+SELECT * FROM svyno_sobaka_bot.message_media ORDER BY media_id DESC LIMIT 100;
+
+-- 12. Связи между сообщениями (новая таблица)
+SELECT * FROM svyno_sobaka_bot.message_references ORDER BY chat_id, message_id;
+
+-- 13. Упоминания пользователей (новая таблица)
+SELECT * FROM svyno_sobaka_bot.message_mentions ORDER BY mention_id DESC LIMIT 100;
 
 -- Полная структура базы данных в формате JSON
 -- Генерация: четверг, 15 января 2026 г. 19:41:31 (MSK)
