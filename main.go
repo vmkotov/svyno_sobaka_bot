@@ -32,7 +32,7 @@ func main() {
 
 	log.Printf("✅ Бот: @%s", bot.Self.UserName)
 
-	// 2. БД (если есть настройки)
+	// 2. БД (если есть  настройки)
 	var db *sql.DB
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL != "" {
