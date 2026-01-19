@@ -11,7 +11,6 @@ import (
 
 // SaveMessageDetailed - сохраняет сообщение детально во все таблицы
 // Каждая вставка коммитится отдельно (авто-коммит)
-// Исправленная версия (убираем неиспользуемые переменные)
 func SaveMessageDetailed(db *sql.DB, botUser *tgbotapi.User, msg *tgbotapi.Message) error {
 	if db == nil {
 		return nil
@@ -26,44 +25,44 @@ func SaveMessageDetailed(db *sql.DB, botUser *tgbotapi.User, msg *tgbotapi.Messa
 	}()
 
 	// ===========================================
-	// 2. ВСТАВКА В БД (с авто-коммитами)
+	// 1. ВСТАВКА В БД (с авто-коммитами)
 	// ===========================================
 
-	// 2.1. Пользователь (отправитель)
+	// 1.1. Пользователь (отправитель)
 	if err := upsertUser(db, botUser.ID, msg.From); err != nil {
 		log.Printf("⚠️ Ошибка upsert_user: %v (продолжаем)", err)
 	}
 
-	// 2.2. Чат
+	// 1.2. Чат
 	if err := upsertChat(db, msg.Chat); err != nil {
 		log.Printf("⚠️ Ошибка upsert_chat: %v (продолжаем)", err)
 	}
 
-	// 2.3. Основное сообщение
+	// 1.3. Основное сообщение
 	if err := insertMessage(db, botUser.ID, msg); err != nil {
 		log.Printf("⚠️ Ошибка insert_message: %v (продолжаем)", err)
 	}
 
-	// 2.4. Медиафайлы
+	// 1.4. Медиафайлы
 	if err := insertMedia(db, msg); err != nil {
 		log.Printf("⚠️ Ошибка insert_media: %v (продолжаем)", err)
 	}
 
-	// 2.5. Ответ на сообщение (reply)
+	// 1.5. Ответ на сообщение (reply)
 	if msg.ReplyToMessage != nil {
 		if err := insertReplyReference(db, msg); err != nil {
 			log.Printf("⚠️ Ошибка insert_reply: %v (продолжаем)", err)
 		}
 	}
 
-	// 2.6. Пересылка (forward)
+	// 1.6. Пересылка (forward)
 	if msg.ForwardFrom != nil || msg.ForwardFromChat != nil {
 		if err := insertForwardReference(db, msg); err != nil {
 			log.Printf("⚠️ Ошибка insert_forward: %v (продолжаем)", err)
 		}
 	}
 
-	// 2.7. Упоминания пользователей
+	// 1.7. Упоминания пользователей
 	if err := insertMentions(db, msg); err != nil {
 		log.Printf("⚠️ Ошибка insert_mentions: %v (продолжаем)", err)
 	}
@@ -124,7 +123,7 @@ func upsertChat(db *sql.DB, chat *tgbotapi.Chat) error {
 	return err
 }
 
-// insertMessage - вызов процедуры insert_message
+// insertMessage - вызов процедуры insert_message (ИСПРАВЛЕННЫЙ!)
 func insertMessage(db *sql.DB, botID int64, msg *tgbotapi.Message) error {
 	messageText := msg.Text
 	caption := msg.Caption
@@ -138,16 +137,27 @@ func insertMessage(db *sql.DB, botID int64, msg *tgbotapi.Message) error {
 	// Дата сообщения из Unix timestamp
 	messageDate := time.Unix(int64(msg.Date), 0)
 
+	// ВАЖНО: Правильный порядок параметров согласно сигнатуре процедуры:
+	// insert_message(
+	//   n_chat_id bigint,           -- 1
+	//   n_message_id integer,       -- 2
+	//   d_message_date timestamptz, -- 3
+	//   n_user_id bigint,           -- 4 ← ДОЛЖЕН быть user_id!
+	//   v_message_text text,        -- 5
+	//   v_caption text,             -- 6
+	//   b_is_bot boolean,           -- 7
+	//   n_telegram_update_id bigint -- 8
+	// )
 	_, err := db.Exec(
 		`CALL svyno_sobaka_bot.insert_message($1, $2, $3, $4, $5, $6, $7, $8)`,
-		msg.Chat.ID,
-		msg.MessageID,
-		messageDate,
-		safeString(messageText),
-		safeString(caption),
-		msg.From.ID,
-		msg.From.IsBot,
-		nil, // telegram_update_id (опционально)
+		msg.Chat.ID,    // 1. n_chat_id (bigint)
+		msg.MessageID,  // 2. n_message_id (integer)
+		messageDate,    // 3. d_message_date (timestamptz)
+		msg.From.ID,    // 4. n_user_id (bigint) ← ВАЖНО! РАНЬШЕ БЫЛ ТЕКСТ
+		messageText,    // 5. v_message_text (text)
+		caption,        // 6. v_caption (text)
+		msg.From.IsBot, // 7. b_is_bot (boolean)
+		nil,            // 8. n_telegram_update_id (bigint)
 	)
 
 	return err
