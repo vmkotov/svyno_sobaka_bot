@@ -153,19 +153,24 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 		return strings.ToLower(tablesInfo[i].Name) < strings.ToLower(tablesInfo[j].Name)
 	})
 
-	// Формируем текст
+	// Формируем текст с MarkdownV2
 	var builder strings.Builder
-	builder.WriteString("📊 БД Тех - Таблицы схемы svyno_sobaka_bot\n")
+	builder.WriteString("📊 БД Тех - Таблицы схемы svyno\\_sobaka\\_bot\n")
 	builder.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	builder.WriteString(fmt.Sprintf("Всего таблиц: %d\n\n", len(tablesInfo)))
 
 	for i, table := range tablesInfo {
-		// 1. **messages_log** [14 полей]. Логи сообщений
-		builder.WriteString(fmt.Sprintf("%d. **%s** [%d полей]", 
-			i+1, table.Name, table.Columns))
+		// Экранируем название таблицы для MarkdownV2
+		tableNameEscaped := escapeMarkdownV2(table.Name)
+		
+		// 1. *messages_log* [14 полей]. Логи сообщений
+		builder.WriteString(fmt.Sprintf("%d\\. *%s* \\[%d полей\\]", 
+			i+1, tableNameEscaped, table.Columns))
 		
 		if table.Comment != "" {
-			builder.WriteString(fmt.Sprintf(". %s", table.Comment))
+			// Экранируем комментарий
+			commentEscaped := escapeMarkdownV2(table.Comment)
+			builder.WriteString(fmt.Sprintf("\\. %s", commentEscaped))
 		}
 		
 		builder.WriteString("\n")
@@ -179,20 +184,36 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 		tgbotapi.NewInlineKeyboardRow(backBtn),
 	)
 
-	// Редактируем сообщение
+	// Редактируем сообщение с MarkdownV2
 	msg := tgbotapi.NewEditMessageTextAndMarkup(
 		callbackQuery.Message.Chat.ID,
 		callbackQuery.Message.MessageID,
 		builder.String(),
 		inlineKeyboard,
 	)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "MarkdownV2"
 
 	if _, err := bot.Send(msg); err != nil {
-		log.Printf("❌ Ошибка отправки списка таблиц: %v", err)
+		log.Printf("❌ Ошибка отправки списка таблиц (MarkdownV2): %v", err)
 		// Пробуем без Markdown
 		msg.ParseMode = ""
-		msg.Text = strings.ReplaceAll(builder.String(), "**", "")
+		plainText := strings.ReplaceAll(builder.String(), "\\", "")
+		plainText = strings.ReplaceAll(plainText, "*", "")
+		plainText = strings.ReplaceAll(plainText, "_", "\\_")
+		msg.Text = plainText
 		bot.Send(msg)
 	}
+}
+
+// escapeMarkdownV2 экранирует специальные символы для MarkdownV2
+func escapeMarkdownV2(text string) string {
+	// Список символов, которые нужно экранировать в MarkdownV2
+	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
+	
+	result := text
+	for _, char := range specialChars {
+		result = strings.ReplaceAll(result, char, "\\"+char)
+	}
+	
+	return result
 }
