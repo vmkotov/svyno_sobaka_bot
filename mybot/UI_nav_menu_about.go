@@ -1,4 +1,7 @@
-// Файл: mybot/UI_nav_menu_about.go
+// ============================================================================
+// ФАЙЛ: UI_nav_menu_about.go
+// Обработка menu:about - информация о боте
+// ============================================================================
 package mybot
 
 import (
@@ -17,27 +20,32 @@ func HandleMenuAboutCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callb
 
 	log.Printf("❓ О боте от @%s", callbackQuery.From.UserName)
 
-	// Простой текст
-	text := "иди нахуй собака"
+	// Текст о боте
+	text := "🤖 *Бот-свинособака*\n\n" +
+		"Я реагирую на ключевые слова в чатах.\n" +
+		"Админы могут управлять триггерами через СвиноАдминку."
 
-	// Кнопка "Назад" - ТЕПЕРЬ с функцией редактирования!
-	editMainMenu(bot, callbackQuery, text)
-}
+	// Кнопка "Назад" 
+	backButton := tgbotapi.NewInlineKeyboardButtonData("🏠 Назад", "menu:main")
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(backButton),
+	)
 
-// editMainMenu - редактирует сообщение с главным меню
-func editMainMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, currentText string) {
-	chatID := callbackQuery.Message.Chat.ID
-	messageID := callbackQuery.Message.MessageID
+	// Редактируем сообщение
+	msg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.Message.Chat.ID,
+		callbackQuery.Message.MessageID,
+		text,
+		keyboard,
+	)
+	msg.ParseMode = "Markdown"
 
-	// Определяем, какое меню показывать
-	if isAdmin(callbackQuery.From.ID) {
-		EditAdminMenu(bot, chatID, messageID)
-	} else {
-		EditUserMenu(bot, chatID, messageID)
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("❌ Ошибка отправки информации о боте: %v", err)
 	}
 }
 
-// editUserMenu - редактирует сообщение на пользовательское меню
+// EditUserMenu - редактирует сообщение на пользовательское меню (экспортируемая)
 func EditUserMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	text := "Привет! Я бот-свинособака 🐷🐶\n" +
 		"Я реагирую на сообщения в чатах.\n\n" +
@@ -64,7 +72,7 @@ func EditUserMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	}
 }
 
-// editAdminMenu - редактирует сообщение на админское меню
+// EditAdminMenu - редактирует сообщение на админское меню (экспортируемая)
 func EditAdminMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	text := "🐷 *СвиноАдминка*\n\nВыберите действие:"
 
