@@ -5,18 +5,17 @@
 package mybot
 
 import (
-    "fmt"
-    "log"
-    
-    tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"log"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 // SendAdminMainMenu отправляет главное меню админки "СвиноАдминка"
 // Теперь показывает тот же интерфейс что и для обычных пользователей
 func SendAdminMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
-    // Используем ту же функцию что и для пользователей
-    SendUserMainMenu(bot, chatID)
-    log.Printf("👑 Админское меню отправлено в чат %d", chatID)
+	// Используем ту же функцию что и для пользователей
+	SendUserMainMenu(bot, chatID)
+	log.Printf("👑 Админское меню отправлено в чат %d", chatID)
 }
 
 // SendUserMainMenu отправляет меню для обычных пользователей
