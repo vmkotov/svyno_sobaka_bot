@@ -31,14 +31,14 @@ func editMainMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, c
 
 	// Определяем, какое меню показывать
 	if isAdmin(callbackQuery.From.ID) {
-		editAdminMenu(bot, chatID, messageID)
+		EditAdminMenu(bot, chatID, messageID)
 	} else {
-		editUserMenu(bot, chatID, messageID)
+		EditUserMenu(bot, chatID, messageID)
 	}
 }
 
 // editUserMenu - редактирует сообщение на пользовательское меню
-func editUserMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
+func EditUserMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	text := "Привет! Я бот-свинособака 🐷🐶\n" +
 		"Я реагирую на сообщения в чатах.\n\n" +
 		"Используйте /help для списка команд."
@@ -65,7 +65,7 @@ func editUserMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 }
 
 // editAdminMenu - редактирует сообщение на админское меню
-func editAdminMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
+func EditAdminMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	text := "🐷 *СвиноАдминка*\n\nВыберите действие:"
 
 	// Кнопки

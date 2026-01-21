@@ -135,3 +135,10 @@ func SendUserMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
 		log.Printf("✅ Пользовательское меню отправлено в чат %d", chatID)
 	}
 }
+
+// SendAdminMainMenu отправляет главное меню админки "СвиноАдминка"
+func SendAdminMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
+	// Используем ту же функцию что и для пользователей
+	SendUserMainMenu(bot, chatID)
+	log.Printf("👑 Админское меню отправлено в чат %d", chatID)
+}

@@ -25,9 +25,9 @@ func HandleMenuUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callback
 		log.Printf("🏠 Показать главное меню для @%s", callbackQuery.From.UserName)
 		// Теперь используем редактирование вместо новой отправки
 		if isAdmin(callbackQuery.From.ID) {
-			editAdminMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
+			EditAdminMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 		} else {
-			editUserMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
+			EditUserMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 		}
 	case "about":
 		log.Printf("❓ О боте для @%s", callbackQuery.From.UserName)
