@@ -38,6 +38,9 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	case "trigger":
 		// admin:trigger:detail:TECH_KEY
 		HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
+	case "bdtech":
+		log.Printf("🛠️ BDtech операции от @%s", callbackQuery.From.UserName)
+		HandleBDtechCallback(bot, callbackQuery, parts)
 	case "home":
 		log.Printf("🏠 Главная из админки от @%s", callbackQuery.From.UserName)
 		EditUserMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
@@ -81,7 +84,7 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 	text := "🐷 *СвиноАдминка*\n\n" +
 		"Выберите действие:"
 
-	// Создаем inline-клавиатуру с тремя кнопками ГОРИЗОНТАЛЬНО
+	// Создаем inline-клавиатуру с четырьмя кнопками ГОРИЗОНТАЛЬНО
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData(
 		"🔄 Обновить", 
 		"admin:refresh",
@@ -90,14 +93,18 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 		"📋 Триггеры", 
 		"admin:triggers:list",
 	)
+	bdtechButton := tgbotapi.NewInlineKeyboardButtonData(
+		"🛠️ БД Тех", 
+		"admin:bdtech:menu",
+	)
 	homeButton := tgbotapi.NewInlineKeyboardButtonData(
 		"🏠 Главная", 
 		"admin:home",
 	)
 
-	// Три кнопки в один ряд (горизонтально)
+	// Четыре кнопки в один ряд (горизонтально)
 	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton, homeButton),
+		tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton, bdtechButton, homeButton),
 	)
 
 	// Редактируем сообщение
