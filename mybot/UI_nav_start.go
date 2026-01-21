@@ -46,7 +46,7 @@ func HandleHelpCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	text := "📋 Команды:\n" +
 		"/start - Начать\n" +
 		"/help - Помощь\n" +
-		"/refresh_me - Обновить триггеры из БД"
+		""
 	SendMessage(bot, msg.Chat.ID, text, "справка")
 }
 

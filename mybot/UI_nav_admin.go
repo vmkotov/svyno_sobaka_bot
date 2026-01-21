@@ -77,19 +77,23 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 	text := "🐷 *СвиноАдминка*\n\n" +
 		"Выберите действие:"
 
-	// Создаем inline-клавиатуру с двумя кнопками
+	// Создаем inline-клавиатуру с тремя кнопками ГОРИЗОНТАЛЬНО
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🔄 Обновить триггеры",
+		"🔄 Обновить",
 		"admin:refresh",
 	)
 	triggersButton := tgbotapi.NewInlineKeyboardButtonData(
-		"📋 Просмотр триггеров",
+		"📋 Триггеры",
 		"admin:triggers:list",
 	)
+	homeButton := tgbotapi.NewInlineKeyboardButtonData(
+		"🏠 Домой",
+		"menu:main",
+	)
 
-	// Две кнопки в один ряд
+	// Три кнопки в один ряд (горизонтально)
 	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton),
+		tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton, homeButton),
 	)
 
 	// Редактируем сообщение
