@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -125,31 +126,43 @@ func exportDatabaseJSON(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filename := fmt.Sprintf("svyno_sobaka_bot_structure_%s.json", timestamp)
 
-	// Отправляем файл
+	// Отправляем файл (БЕЗ Markdown в подписи - используем обычный текст)
 	fileMsg := tgbotapi.NewDocument(callbackQuery.Message.Chat.ID, tgbotapi.FilePath(tmpfile.Name()))
-	fileMsg.Caption = fmt.Sprintf("📄 *Экспорт структуры БД*\n\n"+
-		"Схема: `svyno_sobaka_bot`\n"+
+	
+	// Формируем подпись БЕЗ Markdown форматирования
+	caption := fmt.Sprintf("📄 Экспорт структуры БД\n\n"+
+		"Схема: svyno_sobaka_bot\n"+
 		"Дата: %s\n"+
 		"Размер: %.2f KB\n\n"+
 		"Файл: %s",
 		time.Now().Format("02.01.2006 15:04:05"),
 		float64(len(filteredJSON))/1024,
 		filename)
-	fileMsg.ParseMode = "Markdown"
+	
+	// Экранируем специальные символы для безопасности
+	caption = escapeMarkdownV2(caption)
+	fileMsg.Caption = caption
+	fileMsg.ParseMode = "MarkdownV2"
 
 	if _, err := bot.Send(fileMsg); err != nil {
-		sendErrorMessage(bot, callbackQuery, fmt.Sprintf("❌ Ошибка отправки файла: %v", err))
-		return
+		log.Printf("❌ Ошибка отправки файла: %v", err)
+		// Пробуем без Markdown
+		fileMsg.ParseMode = ""
+		fileMsg.Caption = strings.ReplaceAll(caption, "\\", "")
+		if _, err2 := bot.Send(fileMsg); err2 != nil {
+			sendErrorMessage(bot, callbackQuery, fmt.Sprintf("❌ Ошибка отправки файла: %v", err2))
+			return
+		}
 	}
 
 	// Обновляем оригинальное сообщение
 	successMsg := tgbotapi.NewEditMessageText(
 		callbackQuery.Message.Chat.ID,
 		callbackQuery.Message.MessageID,
-		fmt.Sprintf("✅ *Экспорт завершен!*\n\nФайл `%s` отправлен.\nРазмер: %.2f KB", 
+		fmt.Sprintf("✅ *Экспорт завершен!*\n\nФайл `%s` отправлен\\.\nРазмер: %.2f KB", 
 			filename, float64(len(filteredJSON))/1024),
 	)
-	successMsg.ParseMode = "Markdown"
+	successMsg.ParseMode = "MarkdownV2"
 	bot.Send(successMsg)
 
 	log.Printf("✅ Экспорт JSON отправлен пользователю @%s", callbackQuery.From.UserName)
@@ -157,14 +170,28 @@ func exportDatabaseJSON(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 
 // sendErrorMessage отправляет сообщение об ошибке
 func sendErrorMessage(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, message string) {
+	// Используем MarkdownV2 с экранированием
 	msg := tgbotapi.NewEditMessageText(
 		callbackQuery.Message.Chat.ID,
 		callbackQuery.Message.MessageID,
-		message,
+		escapeMarkdownV2(message),
 	)
-	msg.ParseMode = "Markdown"
+	msg.ParseMode = "MarkdownV2"
 	
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("❌ Ошибка отправки сообщения об ошибке: %v", err)
 	}
+}
+
+// escapeMarkdownV2 экранирует специальные символы для MarkdownV2
+func escapeMarkdownV2(text string) string {
+	// Список символов, которые нужно экранировать в MarkdownV2
+	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
+	
+	result := text
+	for _, char := range specialChars {
+		result = strings.ReplaceAll(result, char, "\\"+char)
+	}
+	
+	return result
 }
