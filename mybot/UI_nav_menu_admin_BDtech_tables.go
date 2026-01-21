@@ -104,6 +104,7 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 	type TableInfo struct {
 		Name    string
 		Columns int
+		Comment string
 	}
 
 	var tablesInfo []TableInfo
@@ -111,11 +112,24 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 		if table, ok := tableObj.(map[string]interface{}); ok {
 			tableName, hasName := table["table_name"].(string)
 			columns, hasColumns := table["columns"].([]interface{})
+			tableComment, _ := table["table_comment"].(string)
 			
 			if hasName && hasColumns {
+				// Если комментарий есть, берем первое предложение
+				shortComment := ""
+				if tableComment != "" {
+					// Берем первое предложение до точки
+					if idx := strings.Index(tableComment, "."); idx != -1 {
+						shortComment = strings.TrimSpace(tableComment[:idx+1])
+					} else {
+						shortComment = tableComment
+					}
+				}
+				
 				tablesInfo = append(tablesInfo, TableInfo{
 					Name:    tableName,
 					Columns: len(columns),
+					Comment: shortComment,
 				})
 			}
 		}
@@ -146,12 +160,18 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 	builder.WriteString(fmt.Sprintf("Всего таблиц: %d\n\n", len(tablesInfo)))
 
 	for i, table := range tablesInfo {
-		// 1. messages_log [14 полей]
-		builder.WriteString(fmt.Sprintf("%d. %s [%d полей]\n", 
+		// 1. **messages_log** [14 полей]. Логи сообщений
+		builder.WriteString(fmt.Sprintf("%d. **%s** [%d полей]", 
 			i+1, table.Name, table.Columns))
+		
+		if table.Comment != "" {
+			builder.WriteString(fmt.Sprintf(". %s", table.Comment))
+		}
+		
+		builder.WriteString("\n")
 	}
 
-	builder.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━\n")
+	builder.WriteString("\n━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 	// Кнопка возврата
 	backBtn := tgbotapi.NewInlineKeyboardButtonData("🔙 Назад в BDtech", "admin:bdtech:menu")
@@ -166,8 +186,13 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 		builder.String(),
 		inlineKeyboard,
 	)
+	msg.ParseMode = "Markdown"
 
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("❌ Ошибка отправки списка таблиц: %v", err)
+		// Пробуем без Markdown
+		msg.ParseMode = ""
+		msg.Text = strings.ReplaceAll(builder.String(), "**", "")
+		bot.Send(msg)
 	}
 }
