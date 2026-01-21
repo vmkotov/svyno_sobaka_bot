@@ -38,6 +38,9 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	case "trigger":
 		// admin:trigger:detail:TECH_KEY
 		HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
+	case "home":
+		log.Printf("🏠 Главная из админки от @%s", callbackQuery.From.UserName)
+		EditUserMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 	default:
 		log.Printf("⚠️ Неизвестный admin callback: %s", parts[1])
 	}
@@ -88,8 +91,8 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 		"admin:triggers:list",
 	)
 	homeButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🏠 Домой", 
-		"menu:main",
+		"🏠 Главная", 
+		"admin:home",
 	)
 
 	// Три кнопки в один ряд (горизонтально)
