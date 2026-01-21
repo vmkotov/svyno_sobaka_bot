@@ -57,3 +57,6 @@ docker-compose.override.yml
 # Скомпилированные бинарники
 svyno_sobaka_bot
 mybot/mybot
+main
+bot_test
+svyno_sobaka_bot_full_code.txt

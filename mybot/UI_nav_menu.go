@@ -1,7 +1,4 @@
-// ============================================================================
-// ФАЙЛ: UI_nav_menu.go
-// Обработка UI callback меню (menu:*)
-// ============================================================================
+// Файл: mybot/UI_nav_menu.go
 package mybot
 
 import (
@@ -18,7 +15,6 @@ func HandleMenuUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callback
 		log.Printf("⚠️ Ошибка AnswerCallbackQuery: %v", err)
 	}
 
-	// Вторая часть - тип меню
 	if len(parts) < 2 {
 		log.Printf("⚠️ Неполный callback_data для меню: %v", parts)
 		return
@@ -27,11 +23,11 @@ func HandleMenuUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callback
 	switch parts[1] {
 	case "main":
 		log.Printf("🏠 Показать главное меню для @%s", callbackQuery.From.UserName)
-		// Определяем, какое меню показывать (админское или обычное)
+		// Теперь используем редактирование вместо новой отправки
 		if isAdmin(callbackQuery.From.ID) {
-			SendAdminMainMenu(bot, callbackQuery.Message.Chat.ID)
+			editAdminMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 		} else {
-			SendUserMainMenu(bot, callbackQuery.Message.Chat.ID)
+			editUserMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
 		}
 	case "about":
 		log.Printf("❓ О боте для @%s", callbackQuery.From.UserName)
