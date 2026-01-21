@@ -21,9 +21,7 @@ func HandleMenuAboutCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callb
 	log.Printf("❓ О боте от @%s", callbackQuery.From.UserName)
 
 	// Текст о боте
-	text := "🤖 *Бот-свинособака*\n\n" +
-		"Я реагирую на ключевые слова в чатах.\n" +
-		"Админы могут управлять триггерами через СвиноАдминку."
+	text := "нахуй иди"
 
 	// Кнопка "Назад" 
 	backButton := tgbotapi.NewInlineKeyboardButtonData("🏠 Назад", "menu:main")
@@ -79,7 +77,7 @@ func EditAdminMenu(bot *tgbotapi.BotAPI, chatID int64, messageID int) {
 	// Кнопки
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData("🔄 Обновить", "admin:refresh")
 	triggersButton := tgbotapi.NewInlineKeyboardButtonData("📋 Триггеры", "admin:triggers:list")
-	homeButton := tgbotapi.NewInlineKeyboardButtonData("🏠 Домой", "menu:main")
+	homeButton := tgbotapi.NewInlineKeyboardButtonData("🏠 Главная", "admin:home")
 
 	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton, homeButton),
