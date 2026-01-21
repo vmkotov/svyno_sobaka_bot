@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"log"
 	"strconv"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -79,15 +80,15 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 
 	// Создаем inline-клавиатуру с тремя кнопками ГОРИЗОНТАЛЬНО
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🔄 Обновить",
+		"🔄 Обновить", 
 		"admin:refresh",
 	)
 	triggersButton := tgbotapi.NewInlineKeyboardButtonData(
-		"📋 Триггеры",
+		"📋 Триггеры", 
 		"admin:triggers:list",
 	)
 	homeButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🏠 Домой",
+		"🏠 Домой", 
 		"menu:main",
 	)
 
@@ -108,6 +109,43 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("❌ Ошибка отправки админского меню: %v", err)
 	}
+}
+
+// handleAdminRefreshTriggers - обновление триггеров из админки
+func handleAdminRefreshTriggers(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
+	// Проверяем, что это личный чат
+	if callbackQuery.Message.Chat.Type != "private" {
+		log.Printf("⚠️ Админский callback из группы, игнорируем: chat_id=%d",
+			callbackQuery.Message.Chat.ID)
+		return
+	}
+
+	// Вызываем существующую логику через виртуальное сообщение
+	virtualMsg := &tgbotapi.Message{
+		MessageID: callbackQuery.Message.MessageID,
+		From:      callbackQuery.From,
+		Chat:      callbackQuery.Message.Chat,
+		Text:      "/refresh_me",
+		Date:      callbackQuery.Message.Date,
+	}
+
+	HandleRefreshMeCommand(bot, virtualMsg, db)
+	log.Printf("✅ Триггеры обновлены через админку от @%s", callbackQuery.From.UserName)
+
+	// Ждем 3 секунды и возвращаем в стартовое меню
+	go func() {
+		time.Sleep(3 * time.Second)
+		
+		// Проверяем админские права для правильного меню
+		if isAdmin(callbackQuery.From.ID) {
+			SendAdminMainMenu(bot, callbackQuery.Message.Chat.ID)
+		} else {
+			SendUserMainMenu(bot, callbackQuery.Message.Chat.ID)
+		}
+		
+		log.Printf("🔙 Автоматический возврат в стартовое меню для @%s", 
+			callbackQuery.From.UserName)
+	}()
 }
 
 // showAdminTriggersMenu показывает админское меню триггеров
@@ -135,28 +173,6 @@ func showAdminTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		log.Printf("❌ Ошибка отправки админского меню триггеров: %v", err)
 	}
 
-	log.Printf("✅ Админское меню триггеров (страница %d) отправлено для @%s",
+	log.Printf("✅ Админское меню триггеров (страница %d) отправлено для @%s", 
 		page, callbackQuery.From.UserName)
-}
-
-// handleAdminRefreshTriggers - обновление триггеров из админки
-func handleAdminRefreshTriggers(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
-	// Проверяем, что это личный чат
-	if callbackQuery.Message.Chat.Type != "private" {
-		log.Printf("⚠️ Админский callback из группы, игнорируем: chat_id=%d",
-			callbackQuery.Message.Chat.ID)
-		return
-	}
-
-	// Вызываем существующую логику через виртуальное сообщение
-	virtualMsg := &tgbotapi.Message{
-		MessageID: callbackQuery.Message.MessageID,
-		From:      callbackQuery.From,
-		Chat:      callbackQuery.Message.Chat,
-		Text:      "/refresh_me",
-		Date:      callbackQuery.Message.Date,
-	}
-
-	HandleRefreshMeCommand(bot, virtualMsg, db)
-	log.Printf("✅ Триггеры обновлены через админку от @%s", callbackQuery.From.UserName)
 }
