@@ -29,7 +29,7 @@ func HandleBDtechCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callback
 		showBDtechMainMenu(bot, callbackQuery, db)
 	case "tables":
 		// Делегируем обработку UI_nav_menu_admin_BDtech_tables.go
-		HandleBDtechTablesCallback(bot, callbackQuery, parts[3:])
+		HandleBDtechTablesCallback(bot, callbackQuery, parts[3:], db)
 	case "columns":
 		// Делегируем обработку UI_nav_menu_admin_BDtech_columns.go
 		HandleBDtechColumnsCallback(bot, callbackQuery, parts[3:])
@@ -64,11 +64,11 @@ func showBDtechMainMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 	tablesBtn := tgbotapi.NewInlineKeyboardButtonData("📊 Таблицы", "admin:bdtech:tables:menu")
 	columnsBtn := tgbotapi.NewInlineKeyboardButtonData("🗂️ Колонки", "admin:bdtech:columns:menu")
 	selectsBtn := tgbotapi.NewInlineKeyboardButtonData("🔍 SELECTы", "admin:bdtech:selects:menu")
-	
+
 	jsonBtn := tgbotapi.NewInlineKeyboardButtonData("📄 JSON", "admin:bdtech:json:export")
 	proceduresBtn := tgbotapi.NewInlineKeyboardButtonData("⚙️ Процедуры", "admin:bdtech:procedures:menu")
 	functionsBtn := tgbotapi.NewInlineKeyboardButtonData("📞 Функции", "admin:bdtech:functions:menu")
-	
+
 	logsBtn := tgbotapi.NewInlineKeyboardButtonData("📝 Логи", "admin:bdtech:logs:menu")
 	backBtn := tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", "admin:menu")
 
@@ -117,7 +117,7 @@ func getDatabaseStats(db *sql.DB) string {
 	// Ищем схему svyno_sobaka_bot
 	var targetSchema map[string]interface{}
 	var svynoSchemaFound bool
-	
+
 	for _, schema := range schemas {
 		if schemaName, ok := schema["schema_name"].(string); ok && schemaName == "svyno_sobaka_bot" {
 			targetSchema = schema
@@ -133,16 +133,16 @@ func getDatabaseStats(db *sql.DB) string {
 	// Считаем статистику
 	tables, _ := targetSchema["tables"].([]interface{})
 	totalTables := len(tables)
-	
+
 	totalColumns := 0
 	var tableNames []string
-	
+
 	for _, tableObj := range tables {
 		if table, ok := tableObj.(map[string]interface{}); ok {
 			if tableName, ok := table["table_name"].(string); ok {
 				tableNames = append(tableNames, fmt.Sprintf("`%s`", tableName))
 			}
-			
+
 			if columns, ok := table["columns"].([]interface{}); ok {
 				totalColumns += len(columns)
 			}
