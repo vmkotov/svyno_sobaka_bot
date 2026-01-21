@@ -19,19 +19,15 @@ func SendAdminMainMenu(bot *tgbotapi.BotAPI, chatID int64) {
         "Выберите действие:",
     )
 
-    // Создаем inline-клавиатуру с двумя кнопками
-    refreshButton := tgbotapi.NewInlineKeyboardButtonData(
-        "🔄 Обновить триггеры", 
-        "admin:refresh",
-    )
-    triggersButton := tgbotapi.NewInlineKeyboardButtonData(
-        "📋 Триггеры", 
-        "admin:triggers:list",
+    // Создаем inline-клавиатуру с одной кнопкой "СВИНОАДМИНКА"
+    adminButton := tgbotapi.NewInlineKeyboardButtonData(
+        "СВИНОАДМИНКА", 
+        "admin:menu",
     )
 
-    // Две кнопки в один ряд
+    // Одна кнопка в один ряд
     inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
-        tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton),
+        tgbotapi.NewInlineKeyboardRow(adminButton),
     )
     
     // Отправляем сообщение

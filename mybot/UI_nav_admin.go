@@ -27,7 +27,7 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	switch parts[1] {
 	case "menu":
 		log.Printf("👑 Админское меню от @%s", callbackQuery.From.UserName)
-		SendAdminMainMenu(bot, callbackQuery.Message.Chat.ID)
+		showAdminMenu(bot, callbackQuery)
 	case "refresh":
 		log.Printf("👑 Админское обновление триггеров от @%s", callbackQuery.From.UserName)
 		handleAdminRefreshTriggers(bot, callbackQuery, db)
@@ -38,6 +38,40 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
 	default:
 		log.Printf("⚠️ Неизвестный admin callback: %s", parts[1])
+	}
+}
+
+// showAdminMenu показывает админское меню (после нажатия на СВИНОАДМИНКА)
+func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) {
+	text := "🐷 *СвиноАдминка*\n\n" +
+		"Выберите действие:"
+
+	// Создаем inline-клавиатуру с двумя кнопками
+	refreshButton := tgbotapi.NewInlineKeyboardButtonData(
+		"🔄 Обновить триггеры", 
+		"admin:refresh",
+	)
+	triggersButton := tgbotapi.NewInlineKeyboardButtonData(
+		"📋 Просмотр триггеров", 
+		"admin:triggers:list",
+	)
+
+	// Две кнопки в один ряд
+	inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(refreshButton, triggersButton),
+	)
+
+	// Редактируем сообщение
+	msg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.Message.Chat.ID,
+		callbackQuery.Message.MessageID,
+		text,
+		inlineKeyboard,
+	)
+	msg.ParseMode = "Markdown"
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("❌ Ошибка отправки админского меню: %v", err)
 	}
 }
 
@@ -92,14 +126,17 @@ func showAdminTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	// Генерируем меню первой страницы с админской навигацией
 	menuText, menuKeyboard := GenerateAdminTriggersMenu(0)
 
-	// Отправляем меню
-	msg := tgbotapi.NewMessage(callbackQuery.Message.Chat.ID, menuText)
-	msg.ReplyMarkup = menuKeyboard
+	// Редактируем сообщение
+	msg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.Message.Chat.ID,
+		callbackQuery.Message.MessageID,
+		menuText,
+		menuKeyboard,
+	)
 	msg.ParseMode = "Markdown"
 
 	if _, err := bot.Send(msg); err != nil {
 		log.Printf("❌ Ошибка отправки админского меню триггеров: %v", err)
-		return
 	}
 
 	log.Printf("✅ Админское меню триггеров отправлено для @%s", callbackQuery.From.UserName)
