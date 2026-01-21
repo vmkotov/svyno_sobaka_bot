@@ -17,7 +17,7 @@ func HandleBDtechTablesCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 		showTablesList(bot, callbackQuery, db)
 		return
 	}
-	
+
 	// Для будущего расширения - детальная информация о таблице
 	showTablesList(bot, callbackQuery, db)
 }
@@ -67,7 +67,7 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 	// Ищем схему svyno_sobaka_bot
 	var targetSchema map[string]interface{}
 	var svynoSchemaFound bool
-	
+
 	for _, schema := range schemas {
 		if schemaName, ok := schema["schema_name"].(string); ok && schemaName == "svyno_sobaka_bot" {
 			targetSchema = schema
@@ -113,7 +113,7 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 			tableName, hasName := table["table_name"].(string)
 			columns, hasColumns := table["columns"].([]interface{})
 			tableComment, _ := table["table_comment"].(string)
-			
+
 			if hasName && hasColumns {
 				// Если комментарий есть, берем первое предложение
 				shortComment := ""
@@ -125,7 +125,7 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 						shortComment = tableComment
 					}
 				}
-				
+
 				tablesInfo = append(tablesInfo, TableInfo{
 					Name:    tableName,
 					Columns: len(columns),
@@ -138,7 +138,7 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 	if len(tablesInfo) == 0 {
 		text := "📊 **БД Тех - Таблицы схемы svyno_sobaka_bot**\n\n" +
 			"В схеме нет таблиц"
-		
+
 		msg := tgbotapi.NewEditMessageText(
 			callbackQuery.Message.Chat.ID,
 			callbackQuery.Message.MessageID,
@@ -155,19 +155,19 @@ func showTablesList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery,
 
 	// Формируем текст с обычным Markdown
 	var builder strings.Builder
-	builder.WriteString("📊 **БД Тех - Таблицы схемы svyno_sobaka_bot**\n")
+	builder.WriteString("📊 *БД Тех - Таблицы схемы svyno_sobaka_bot*\n")
 	builder.WriteString("━━━━━━━━━━━━━━━━━━━━━━━━\n")
 	builder.WriteString(fmt.Sprintf("Всего таблиц: %d\n\n", len(tablesInfo)))
 
 	for i, table := range tablesInfo {
 		// 1. **messages_log** [14 полей]. Логи сообщений
-		builder.WriteString(fmt.Sprintf("%d. **%s** [%d полей]", 
+		builder.WriteString(fmt.Sprintf("%d. *%s* [%d полей]",
 			i+1, table.Name, table.Columns))
-		
+
 		if table.Comment != "" {
 			builder.WriteString(fmt.Sprintf(". %s", table.Comment))
 		}
-		
+
 		builder.WriteString("\n")
 	}
 
