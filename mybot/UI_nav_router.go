@@ -1,5 +1,5 @@
 // ============================================================================
-// ФАЙЛ: ui_callbacks.go
+// ФАЙЛ: UI_nav_router.go
 // Главный роутер UI callback-запросов
 // Делегирует обработку специализированным UI модулям
 // ============================================================================
@@ -34,23 +34,33 @@ func HandleCallbackQuery(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQ
 
 	// Парсинг callback_data
 	parts := parseCallbackData(callbackQuery.Data)
+	log.Printf("📋 Парсинг callback_data: %v -> %v", callbackQuery.Data, parts)
 
 	if len(parts) == 0 {
+		log.Printf("⚠️ Пустой callback_data, переходим к legacy")
 		handleLegacyCallback(bot, callbackQuery, db)
 		return
 	}
 
 	// Роутинг по типу callback
+	log.Printf("🎯 Роутинг по префиксу: %s", parts[0])
+	
 	switch parts[0] {
 	case "menu":
+		log.Printf("📱 Обработка menu callback: %v", parts)
 		HandleMenuUICallback(bot, callbackQuery, parts)
 	case "refresh":
+		log.Printf("🔄 Обработка refresh callback: %v", parts)
 		HandleRefreshUICallback(bot, callbackQuery, parts, db)
 	case "admin":
+		log.Printf("👑 Обработка admin callback: %v", parts)
 		HandleAdminUICallback(bot, callbackQuery, parts, db)
 	default:
+		log.Printf("⚠️ Неизвестный префикс: %s", parts[0])
 		handleLegacyCallback(bot, callbackQuery, db)
 	}
+	
+	log.Printf("✅ Callback обработан: %s", callbackQuery.Data)
 }
 
 // parseCallbackData парсит callback_data по системе "тип:подтип:параметр"
