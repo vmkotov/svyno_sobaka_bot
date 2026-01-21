@@ -7,6 +7,7 @@ package mybot
 import (
 	"database/sql"
 	"log"
+	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -41,6 +42,36 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	}
 }
 
+// handleAdminTriggersUICallback - обработка админских триггеров
+func handleAdminTriggersUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, parts []string, db *sql.DB) {
+	if len(parts) < 3 {
+		log.Printf("⚠️ Неполный admin triggers callback: %v", parts)
+		return
+	}
+
+	switch parts[2] {
+	case "list":
+		// Показать первую страницу админских триггеров
+		log.Printf("👑 Админский список триггеров от @%s", callbackQuery.From.UserName)
+		showAdminTriggersMenu(bot, callbackQuery, db, 0)
+	case "page":
+		// Показать конкретную страницу
+		if len(parts) < 4 {
+			log.Printf("⚠️ Нет номера страницы: %v", parts)
+			return
+		}
+		page, err := strconv.Atoi(parts[3])
+		if err != nil {
+			log.Printf("❌ Неверный номер страницы: %s", parts[3])
+			return
+		}
+		log.Printf("👑 Админская страница триггеров %d от @%s", page, callbackQuery.From.UserName)
+		showAdminTriggersMenu(bot, callbackQuery, db, page)
+	default:
+		log.Printf("⚠️ Неизвестный admin triggers команда: %s", parts[2])
+	}
+}
+
 // showAdminMenu показывает админское меню (после нажатия на СВИНОАДМИНКА)
 func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) {
 	text := "🐷 *СвиноАдминка*\n\n" +
@@ -48,11 +79,11 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 
 	// Создаем inline-клавиатуру с двумя кнопками
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🔄 Обновить триггеры", 
+		"🔄 Обновить триггеры",
 		"admin:refresh",
 	)
 	triggersButton := tgbotapi.NewInlineKeyboardButtonData(
-		"📋 Просмотр триггеров", 
+		"📋 Просмотр триггеров",
 		"admin:triggers:list",
 	)
 
@@ -75,6 +106,35 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 	}
 }
 
+// showAdminTriggersMenu показывает админское меню триггеров
+func showAdminTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB, page int) {
+	// Проверяем, что это личный чат
+	if callbackQuery.Message.Chat.Type != "private" {
+		log.Printf("⚠️ Админский callback из группы, игнорируем: chat_id=%d",
+			callbackQuery.Message.Chat.ID)
+		return
+	}
+
+	// Генерируем меню страницы с админской навигацией
+	menuText, menuKeyboard := GenerateAdminTriggersMenu(page)
+
+	// Редактируем сообщение
+	msg := tgbotapi.NewEditMessageTextAndMarkup(
+		callbackQuery.Message.Chat.ID,
+		callbackQuery.Message.MessageID,
+		menuText,
+		menuKeyboard,
+	)
+	msg.ParseMode = "Markdown"
+
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("❌ Ошибка отправки админского меню триггеров: %v", err)
+	}
+
+	log.Printf("✅ Админское меню триггеров (страница %d) отправлено для @%s",
+		page, callbackQuery.From.UserName)
+}
+
 // handleAdminRefreshTriggers - обновление триггеров из админки
 func handleAdminRefreshTriggers(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
 	// Проверяем, что это личный чат
@@ -95,49 +155,4 @@ func handleAdminRefreshTriggers(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 
 	HandleRefreshMeCommand(bot, virtualMsg, db)
 	log.Printf("✅ Триггеры обновлены через админку от @%s", callbackQuery.From.UserName)
-}
-
-// handleAdminTriggersUICallback - обработка админских триггеров
-func handleAdminTriggersUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, parts []string, db *sql.DB) {
-	if len(parts) < 3 {
-		log.Printf("⚠️ Неполный admin triggers callback: %v", parts)
-		return
-	}
-
-	switch parts[2] {
-	case "list":
-		// Показать первую страницу админских триггеров
-		log.Printf("👑 Админский список триггеров от @%s", callbackQuery.From.UserName)
-		showAdminTriggersMenu(bot, callbackQuery, db)
-	default:
-		log.Printf("⚠️ Неизвестный admin triggers команда: %s", parts[2])
-	}
-}
-
-// showAdminTriggersMenu показывает админское меню триггеров
-func showAdminTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, db *sql.DB) {
-	// Проверяем, что это личный чат
-	if callbackQuery.Message.Chat.Type != "private" {
-		log.Printf("⚠️ Админский callback из группы, игнорируем: chat_id=%d",
-			callbackQuery.Message.Chat.ID)
-		return
-	}
-
-	// Генерируем меню первой страницы с админской навигацией
-	menuText, menuKeyboard := GenerateAdminTriggersMenu(0)
-
-	// Редактируем сообщение
-	msg := tgbotapi.NewEditMessageTextAndMarkup(
-		callbackQuery.Message.Chat.ID,
-		callbackQuery.Message.MessageID,
-		menuText,
-		menuKeyboard,
-	)
-	msg.ParseMode = "Markdown"
-
-	if _, err := bot.Send(msg); err != nil {
-		log.Printf("❌ Ошибка отправки админского меню триггеров: %v", err)
-	}
-
-	log.Printf("✅ Админское меню триггеров отправлено для @%s", callbackQuery.From.UserName)
 }
