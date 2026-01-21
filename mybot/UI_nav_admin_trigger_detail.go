@@ -32,55 +32,26 @@ func GenerateTriggerDetailCard(trigger *Trigger, fromPage int) (string, tgbotapi
 	return message, keyboard
 }
 
-// HandleTriggerDetailCallback обрабатывает callback детальной карточки
-func HandleTriggerDetailCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, parts []string) {
-	// Убираем "часики"
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
-	bot.Request(callback)
-
-	if len(parts) < 3 {
-		log.Printf("⚠️ Неполный callback_data для деталей триггера: %v", parts)
-		return
+// GenerateAdminTriggerDetailCard создает админскую детальную карточку триггера
+func GenerateAdminTriggerDetailCard(trigger *Trigger, fromPage int) (string, tgbotapi.InlineKeyboardMarkup) {
+	if trigger == nil {
+		return createErrorMessage("unknown"), createAdminBackButton(fromPage)
 	}
 
-	techKey := parts[2] // format: "trigger:detail:tech_key"
+	// Форматируем детали
+	message := formatTriggerDetail(trigger)
 
-	// Извлекаем номер страницы из сообщения или используем 0
-	fromPage := extractPageFromMessage(callbackQuery.Message.Text)
+	// Добавляем админскую пометку
+	message = "👑 *АДМИНКА*\n\n" + message
 
-	// Получаем триггер
-	trigger := GetTriggerByTechKey(techKey)
+	// Логируем сообщение для отладки
+	log.Printf("👑 Админская детальная карточка для %s, длина: %d байт",
+		trigger.TriggerName, len(message))
 
-	// Генерируем детальную карточку
-	message, keyboard := GenerateTriggerDetailCard(trigger, fromPage)
+	keyboard := createAdminDetailKeyboard(trigger.TechKey, fromPage)
 
-	// Отладочная информация
-	log.Printf("📝 Отправляем сообщение длиной %d байт", len(message))
-
-	// Редактируем сообщение
-	msg := tgbotapi.NewEditMessageTextAndMarkup(
-		callbackQuery.Message.Chat.ID,
-		callbackQuery.Message.MessageID,
-		message,
-		keyboard,
-	)
-	msg.ParseMode = "Markdown"
-
-	if _, err := bot.Send(msg); err != nil {
-		log.Printf("❌ Ошибка отправки детальной карточки: %v", err)
-
-		// Пробуем отправить без Markdown
-		log.Printf("🔄 Пробуем отправить без Markdown...")
-		msg.ParseMode = ""
-		if _, err2 := bot.Send(msg); err2 != nil {
-			log.Printf("❌ Ошибка даже без Markdown: %v", err2)
-		} else {
-			log.Printf("✅ Отправлено без Markdown")
-		}
-	}
+	return message, keyboard
 }
-
-// ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =================
 
 func createErrorMessage(techKey string) string {
 	return fmt.Sprintf("❌ Триггер с ключом `%s` не найден\n\n"+
@@ -105,15 +76,15 @@ func formatTriggerDetail(trigger *Trigger) string {
 			"🔍 *Паттерны:*\n%s\n\n"+
 			"💬 *Ответы:*\n%s\n\n"+
 			"Ключ: `%s`",
-		safeMarkdown(trigger.TriggerName), // Умное экранирование
-		safeCode(trigger.TechKey),         // В кодовом блоке - safeCode!
+		safeMarkdown(trigger.TriggerName),
+		safeCode(trigger.TechKey),
 		trigger.Priority,
 		int(trigger.Probability*100),
 		len(trigger.Patterns),
 		len(trigger.Responses),
-		patternsText,              // Уже экранировано в formatPatterns
-		responsesText,             // Уже экранировано в formatResponses
-		safeCode(trigger.TechKey), // В кодовом блоке - safeCode!
+		patternsText,
+		responsesText,
+		safeCode(trigger.TechKey),
 	)
 }
 
@@ -124,7 +95,6 @@ func formatPatterns(patterns []Pattern) string {
 
 	var builder strings.Builder
 	for i, p := range patterns {
-		// Для паттернов внутри ` ` используем safeCode
 		escapedPattern := safeCode(p.PatternText)
 		builder.WriteString(fmt.Sprintf("%d. `%s`\n", i+1, escapedPattern))
 	}
@@ -138,7 +108,6 @@ func formatResponses(responses []Response) string {
 
 	var builder strings.Builder
 	for i, r := range responses {
-		// Для ответов используем умное экранирование
 		escapedResponse := safeMarkdown(r.ResponseText)
 		builder.WriteString(fmt.Sprintf("%d. %s (вес: %d)\n",
 			i+1, escapedResponse, r.ResponseWeight))
@@ -147,10 +116,7 @@ func formatResponses(responses []Response) string {
 }
 
 func createDetailKeyboard(techKey string, fromPage int) tgbotapi.InlineKeyboardMarkup {
-	// Кнопка "Назад" возвращает на ту же страницу
 	backCallback := fmt.Sprintf("triggers:page:%d", fromPage)
-
-	// Кнопка "Главная"
 	homeCallback := "menu:main"
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
@@ -175,9 +141,32 @@ func createBackButton(fromPage int) tgbotapi.InlineKeyboardMarkup {
 	return keyboard
 }
 
-// extractPageFromMessage пытается извлечь номер страницы из текста сообщения
+func createAdminDetailKeyboard(techKey string, fromPage int) tgbotapi.InlineKeyboardMarkup {
+	backCallback := fmt.Sprintf("admin:triggers:page:%d", fromPage)
+	adminCallback := "admin:menu"
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", backCallback),
+			tgbotapi.NewInlineKeyboardButtonData("🐷 В админку", adminCallback),
+		),
+	)
+
+	return keyboard
+}
+
+func createAdminBackButton(fromPage int) tgbotapi.InlineKeyboardMarkup {
+	backCallback := fmt.Sprintf("admin:triggers:page:%d", fromPage)
+
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", backCallback),
+		),
+	)
+
+	return keyboard
+}
+
 func extractPageFromMessage(text string) int {
-	// Простая реализация - всегда возвращаем 0
-	// TODO: можно добавить парсинг "Триггеры 1-10 из 50"
 	return 0
 }
