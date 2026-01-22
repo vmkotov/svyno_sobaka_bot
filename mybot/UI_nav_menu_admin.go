@@ -37,27 +37,35 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		handleAdminTriggersUICallback(bot, callbackQuery, parts, db)
 	case "trigger":
 		// Обработка новых кнопок триггера
-		if len(parts) >= 5 {
+		if len(parts) >= 4 {
 			switch parts[2] {
 			case "pattern":
-				if parts[3] == "add" {
+				if len(parts) >= 5 && parts[3] == "add" {
 					handleAddPattern(bot, callbackQuery, parts[4]) // techKey
 					return
 				}
-				if parts[3] == "cancel" {
+				if len(parts) >= 5 && parts[3] == "cancel" {
 					handleAddPatternCancel(bot, callbackQuery, parts[4])
 					return
 				}
 			case "response":
-				if parts[3] == "add" {
+				if len(parts) >= 5 && parts[3] == "add" {
 					handleAddResponse(bot, callbackQuery, parts[4])
 					return
 				}
 			case "prob":
-				if parts[3] == "edit" {
+				if len(parts) >= 5 && parts[3] == "edit" {
 					handleEditProbability(bot, callbackQuery, parts[4])
 					return
 				}
+			case "new":
+				if len(parts) >= 4 && parts[3] == "cancel" {
+					handleAddNewTriggerCancel(bot, callbackQuery)
+					return
+				}
+				// admin:trigger:new
+				handleAddNewTrigger(bot, callbackQuery)
+				return
 			}
 		}
 		// Если не новые кнопки, то это детальная карточка
