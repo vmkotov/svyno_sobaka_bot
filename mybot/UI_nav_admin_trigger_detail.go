@@ -144,11 +144,27 @@ func createBackButton(fromPage int) tgbotapi.InlineKeyboardMarkup {
 func createAdminDetailKeyboard(techKey string, fromPage int) tgbotapi.InlineKeyboardMarkup {
 	backCallback := fmt.Sprintf("admin:triggers:page:%d", fromPage)
 	adminCallback := "admin:menu"
+	
+	// НОВЫЕ КНОПКИ
+	addPatternCallback := fmt.Sprintf("admin:trigger:pattern:add:%s", techKey)
+	addResponseCallback := fmt.Sprintf("admin:trigger:response:add:%s", techKey)
+	editProbCallback := fmt.Sprintf("admin:trigger:prob:edit:%s", techKey)
 
+	// 3 РЯДА КНОПОК
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		// Ряд 1: Навигация
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("⬅️ Назад", backCallback),
 			tgbotapi.NewInlineKeyboardButtonData("🐷 В админку", adminCallback),
+		),
+		// Ряд 2: Добавление
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("➕ Паттерн", addPatternCallback),
+			tgbotapi.NewInlineKeyboardButtonData("➕ Ответ", addResponseCallback),
+		),
+		// Ряд 3: Редактирование
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("🎲 Вероятность", editProbCallback),
 		),
 	)
 

@@ -36,6 +36,27 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	case "triggers":
 		handleAdminTriggersUICallback(bot, callbackQuery, parts, db)
 	case "trigger":
+		// Обработка новых кнопок триггера
+		if len(parts) >= 5 {
+			switch parts[2] {
+			case "pattern":
+				if parts[3] == "add" {
+					handleAddPattern(bot, callbackQuery, parts[4]) // techKey
+					return
+				}
+			case "response":
+				if parts[3] == "add" {
+					handleAddResponse(bot, callbackQuery, parts[4])
+					return
+				}
+			case "prob":
+				if parts[3] == "edit" {
+					handleEditProbability(bot, callbackQuery, parts[4])
+					return
+				}
+			}
+		}
+		// Если не новые кнопки, то это детальная карточка
 		// admin:trigger:detail:TECH_KEY
 		HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
 	case "bdtech":
@@ -47,6 +68,27 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	default:
 		log.Printf("⚠️ Неизвестный admin callback: %s", parts[1])
 	}
+}
+
+// handleAddPattern - обработка добавления паттерна (временная)
+func handleAddPattern(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
+	callback := tgbotapi.NewCallback(callbackQuery.ID, "➕ Паттерн: пока в разработке")
+	bot.Request(callback)
+	log.Printf("🛠️ Добавление паттерна для %s от @%s", techKey, callbackQuery.From.UserName)
+}
+
+// handleAddResponse - обработка добавления ответа (временная)
+func handleAddResponse(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
+	callback := tgbotapi.NewCallback(callbackQuery.ID, "➕ Ответ: пока в разработке")
+	bot.Request(callback)
+	log.Printf("🛠️ Добавление ответа для %s от @%s", techKey, callbackQuery.From.UserName)
+}
+
+// handleEditProbability - обработка изменения вероятности (временная)
+func handleEditProbability(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
+	callback := tgbotapi.NewCallback(callbackQuery.ID, "🎲 Вероятность: пока в разработке")
+	bot.Request(callback)
+	log.Printf("🛠️ Изменение вероятности для %s от @%s", techKey, callbackQuery.From.UserName)
 }
 
 // handleAdminTriggersUICallback - обработка админских триггеров
