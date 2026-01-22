@@ -74,13 +74,7 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	}
 }
 
-// Временные заглушки - теперь реальные функции в отдельном файле
-func handleAddResponse(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "➕ Ответ: пока в разработке")
-	bot.Request(callback)
-	log.Printf("🛠️ Добавление ответа для %s от @%s", techKey, callbackQuery.From.UserName)
-}
-
+// Заглушка для handleEditProbability
 func handleEditProbability(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "🎲 Вероятность: пока в разработке")
 	bot.Request(callback)
