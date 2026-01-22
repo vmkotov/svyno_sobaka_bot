@@ -65,7 +65,7 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 		if randSource.Float64() > trigger.Probability {
 			log.Printf("🎲 Пропущен ОТВЕТ триггера %s (вероятность %.0f%%)",
 				trigger.TriggerName, trigger.Probability*100)
-			sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, -1, logChatID)
+			sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, -1, logChatID, "рандомайзер")
 			return true // Триггер сработал, но ответ не отправлен
 		}
 	}
@@ -73,14 +73,25 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	// 3. Выбираем случайный ответ (если несколько)
 	if len(trigger.Responses) == 0 {
 		log.Printf("⚠️ У триггера %s нет ответов", trigger.TriggerName)
-		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, -1, logChatID)
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, -1, logChatID, "нет ответов")
 		return true // Триггер сработал, но нет ответов
 	}
 
 	responseIndex := selectWeightedResponse(trigger.Responses)
 	response := trigger.Responses[responseIndex]
 
-	// 4. Отправляем ответ
+	// 4. Проверка длины сообщения (не более 50 символов для ответа)
+	log.Printf("📏 Длина normalizedText для триггера %s: %d символов (original: %d)",
+		trigger.TriggerName, len(normalizedText), len(msg.Text))
+	
+	if len(normalizedText) > 50 {
+		log.Printf("📏 Пропущен ОТВЕТ триггера %s (длина сообщения %d > 50 символов)",
+			trigger.TriggerName, len(normalizedText))
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID, "длина > 50 символов")
+		return true // Триггер сработал, но ответ не отправлен из-за длины
+	}
+
+	// 5. Отправляем ответ
 	replyMsg := tgbotapi.NewMessage(msg.Chat.ID, response.ResponseText)
 	replyMsg.ReplyToMessageID = msg.MessageID
 
@@ -94,15 +105,15 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	if _, err := bot.Send(replyMsg); err != nil {
 		log.Printf("❌ Ошибка отправки ответа триггера %s: %v",
 			trigger.TriggerName, err)
-		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID)
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID, "ошибка отправки")
 		return true // Триггер сработал, но ошибка отправки
 	}
 
 	log.Printf("✅ Отправлен ответ триггера %s: %.30s...",
 		trigger.TriggerName, response.ResponseText)
 
-	// 5. Логируем в лог-чат
-	sendTriggerLogToChat(bot, msg, trigger, foundPatterns, true, responseIndex, logChatID)
+	// 6. Логируем в лог-чат
+	sendTriggerLogToChat(bot, msg, trigger, foundPatterns, true, responseIndex, logChatID, "")
 
 	return true // Триггер сработал И ответ отправлен
 }
@@ -144,12 +155,15 @@ func selectWeightedResponse(responses []Response) int {
 // sendTriggerLogToChat логирует срабатывание триггера в отдельный чат
 func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	trigger *Trigger, foundPatterns []string,
-	responded bool, responseIndex int, logChatID int64) {
+	responded bool, responseIndex int, logChatID int64, skipReason string) {
 
 	var reactionStatus string
 	if responded {
 		reactionStatus = fmt.Sprintf("✅ *Отреагировал* (вероятность %.0f%%)",
 			trigger.Probability*100)
+	} else if skipReason != "" {
+		// Показываем причину пропуска
+		reactionStatus = fmt.Sprintf("⏸️ *Пропущено: %s*", skipReason)
 	} else {
 		reactionStatus = fmt.Sprintf("🎲 *Пропущено рандомайзером* (вероятность %.0f%%)",
 			trigger.Probability*100)
@@ -212,7 +226,8 @@ func sendTriggerLogToChat(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 }
 
 // escapeMarkdownForLog - безопасное экранирование для логов
-func escapeMarkdownForLog(text string) string {// Отличается от обычного escapeMarkdown - не экранирует дефисы и точки
+func escapeMarkdownForLog(text string) string {
+	// Отличается от обычного escapeMarkdown - не экранирует дефисы и точки
 	if text == "" {
 		return ""
 	}
