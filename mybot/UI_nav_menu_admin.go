@@ -44,6 +44,10 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 					handleAddPattern(bot, callbackQuery, parts[4]) // techKey
 					return
 				}
+				if parts[3] == "cancel" {
+					handleAddPatternCancel(bot, callbackQuery, parts[4])
+					return
+				}
 			case "response":
 				if parts[3] == "add" {
 					handleAddResponse(bot, callbackQuery, parts[4])
@@ -70,21 +74,13 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	}
 }
 
-// handleAddPattern - обработка добавления паттерна (временная)
-func handleAddPattern(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
-	callback := tgbotapi.NewCallback(callbackQuery.ID, "➕ Паттерн: пока в разработке")
-	bot.Request(callback)
-	log.Printf("🛠️ Добавление паттерна для %s от @%s", techKey, callbackQuery.From.UserName)
-}
-
-// handleAddResponse - обработка добавления ответа (временная)
+// Временные заглушки - теперь реальные функции в отдельном файле
 func handleAddResponse(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "➕ Ответ: пока в разработке")
 	bot.Request(callback)
 	log.Printf("🛠️ Добавление ответа для %s от @%s", techKey, callbackQuery.From.UserName)
 }
 
-// handleEditProbability - обработка изменения вероятности (временная)
 func handleEditProbability(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery, techKey string) {
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "🎲 Вероятность: пока в разработке")
 	bot.Request(callback)
