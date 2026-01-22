@@ -32,7 +32,7 @@ func handleAddPattern(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuer
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "")
 	bot.Request(callback)
 
-	log.Printf("🛠️ Показать форму добавления паттерна для %s от @%s", 
+	log.Printf("🛠️ Показать форму добавления паттерна для %s от @%s",
 		techKey, callbackQuery.From.UserName)
 
 	// Получаем триггер для отображения названия
@@ -95,7 +95,7 @@ func handleAddPatternCancel(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callba
 	callback := tgbotapi.NewCallback(callbackQuery.ID, "❌ Добавление отменено")
 	bot.Request(callback)
 
-	log.Printf("❌ Отмена добавления паттерна для %s от @%s", 
+	log.Printf("❌ Отмена добавления паттерна для %s от @%s",
 		techKey, callbackQuery.From.UserName)
 
 	// Удаляем форму сообщения
@@ -109,7 +109,7 @@ func handleAddPatternCancel(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callba
 	trigger := GetTriggerByTechKey(techKey)
 	if trigger != nil {
 		message, keyboard := GenerateAdminTriggerDetailCard(trigger, 0)
-		
+
 		editMsg := tgbotapi.NewEditMessageTextAndMarkup(
 			callbackQuery.Message.Chat.ID,
 			callbackQuery.Message.MessageID,
@@ -135,7 +135,7 @@ func ProcessPatternInput(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB
 		return false
 	}
 
-	log.Printf("📝 Обработка ввода паттерна от @%s: %s", 
+	log.Printf("📝 Обработка ввода паттерна от @%s: %s",
 		msg.From.UserName, msg.Text)
 
 	// Валидация паттерна
@@ -165,18 +165,39 @@ func ProcessPatternInput(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB
 	}
 
 	// Вызываем процедуру БД
-	log.Printf("📊 Вызов процедуры для триггера %s с паттерном: %s", 
-		state.TechKey, patternText)
+	log.Printf("📊 Вызов процедуры для триггера %s с паттерном: %s (message_id: %d)",
+		state.TechKey, patternText, sentHiddenMsg.MessageID)
 
-	// TODO: Реальная процедура
-	// _, err = db.Exec("CALL svyno_sobaka_bot.update_pattern_with_logging($1, $2, $3)",
-	//     state.TechKey, patternText, sentHiddenMsg.MessageID)
+	// Проверяем что БД доступна
+	if db == nil {
+		log.Printf("❌ БД не доступна для сохранения паттерна")
 
-	// ВРЕМЕННАЯ ЗАГЛУШКА
-	log.Printf("🛠️ [ЗАГЛУШКА] Вызвана бы процедура с параметрами:")
-	log.Printf("   tech_key: %s", state.TechKey)
-	log.Printf("   pattern: %s", patternText)
-	log.Printf("   message_id: %d", sentHiddenMsg.MessageID)
+		// Удаляем скрытое сообщение
+		deleteHiddenMsg := tgbotapi.NewDeleteMessage(msg.Chat.ID, sentHiddenMsg.MessageID)
+		bot.Send(deleteHiddenMsg)
+
+		showPatternAddResult(bot, state, patternText, false, "БД не доступна")
+		delete(patternAddStates, msg.From.ID)
+		return true
+	}
+
+	// РЕАЛЬНЫЙ ВЫЗОВ ПРОЦЕДУРЫ
+	_, err = db.Exec("CALL svyno_sobaka_bot.update_pattern_with_logging($1, $2, $3)",
+		state.TechKey, patternText, sentHiddenMsg.MessageID)
+
+	if err != nil {
+		log.Printf("❌ Ошибка вызова процедуры БД: %v", err)
+
+		// Удаляем скрытое сообщение при ошибке
+		deleteHiddenMsg := tgbotapi.NewDeleteMessage(msg.Chat.ID, sentHiddenMsg.MessageID)
+		bot.Send(deleteHiddenMsg)
+
+		showPatternAddResult(bot, state, patternText, false, "Ошибка БД: "+err.Error())
+		delete(patternAddStates, msg.From.ID)
+		return true
+	}
+
+	log.Printf("✅ Процедура успешно вызвана для триггера %s", state.TechKey)
 
 	// Удаляем скрытое сообщение
 	deleteHiddenMsg := tgbotapi.NewDeleteMessage(msg.Chat.ID, sentHiddenMsg.MessageID)
@@ -192,7 +213,7 @@ func ProcessPatternInput(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB
 }
 
 // showPatternAddResult - показывает результат добавления паттерна
-func showPatternAddResult(bot *tgbotapi.BotAPI, state *PatternAddState, 
+func showPatternAddResult(bot *tgbotapi.BotAPI, state *PatternAddState,
 	patternText string, success bool, errorMsg string) {
 
 	trigger := GetTriggerByTechKey(state.TechKey)
