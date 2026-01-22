@@ -36,41 +36,50 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 	case "triggers":
 		handleAdminTriggersUICallback(bot, callbackQuery, parts, db)
 	case "trigger":
-		// Обработка новых кнопок триггера
-		if len(parts) >= 4 {
+		// Обработка нового триггера (admin:trigger:new)
+		if len(parts) >= 3 && parts[2] == "new" {
+			if len(parts) >= 4 && parts[3] == "cancel" {
+				handleAddNewTriggerCancel(bot, callbackQuery)
+			} else {
+				handleAddNewTrigger(bot, callbackQuery)
+			}
+			return
+		}
+		
+		// Обработка остальных кнопок триггера (нужно >=5 частей)
+		if len(parts) >= 5 {
 			switch parts[2] {
 			case "pattern":
-				if len(parts) >= 5 && parts[3] == "add" {
+				if parts[3] == "add" {
 					handleAddPattern(bot, callbackQuery, parts[4]) // techKey
 					return
 				}
-				if len(parts) >= 5 && parts[3] == "cancel" {
+				if parts[3] == "cancel" {
 					handleAddPatternCancel(bot, callbackQuery, parts[4])
 					return
 				}
 			case "response":
-				if len(parts) >= 5 && parts[3] == "add" {
+				if parts[3] == "add" {
 					handleAddResponse(bot, callbackQuery, parts[4])
 					return
 				}
 			case "prob":
-				if len(parts) >= 5 && parts[3] == "edit" {
+				if parts[3] == "edit" {
 					handleEditProbability(bot, callbackQuery, parts[4])
 					return
 				}
-			case "new":
-				if len(parts) >= 4 && parts[3] == "cancel" {
-					handleAddNewTriggerCancel(bot, callbackQuery)
-					return
-				}
-				// admin:trigger:new
-				handleAddNewTrigger(bot, callbackQuery)
-				return
 			}
 		}
+		
 		// Если не новые кнопки, то это детальная карточка
-		// admin:trigger:detail:TECH_KEY
-		HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
+		// admin:trigger:detail:TECH_KEY (должно быть 4 части)
+		if len(parts) >= 4 && parts[2] == "detail" {
+			HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
+			return
+		}
+		
+		log.Printf("⚠️ Неизвестный trigger callback: %v", parts)
+		
 	case "bdtech":
 		log.Printf("🛠️ BDtech операции от @%s", callbackQuery.From.UserName)
 		HandleBDtechCallback(bot, callbackQuery, parts, db)
@@ -98,7 +107,7 @@ func handleAdminTriggersUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi
 
 	switch parts[2] {
 	case "list":
-		// Показать первую страницу админских триггеров
+		// Показать первой страницы админских триггеров
 		log.Printf("👑 Админский список триггеров от @%s", callbackQuery.From.UserName)
 		showAdminTriggersMenu(bot, callbackQuery, db, 0)
 	case "page":
