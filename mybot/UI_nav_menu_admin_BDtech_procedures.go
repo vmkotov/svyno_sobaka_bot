@@ -169,11 +169,21 @@ func showProceduresList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 		// Форматируем текст кнопки
 		buttonText := formatProcedureButton(procName, procType, procNum)
 
-		// Создаем callback_data
+		// Создаем callback_data с проверкой длины (макс 64 байта в Telegram)
 		callbackData := fmt.Sprintf("admin:bdtech:procedure:view:svyno_sobaka_bot:%s", procName)
+		if len(callbackData) > 64 {
+			// Укорачиваем имя процедуры
+			maxProcNameLength := 64 - len("admin:bdtech:procedure:view:svyno_sobaka_bot:")
+			if maxProcNameLength > 0 && len(procName) > maxProcNameLength {
+				shortName := procName[:maxProcNameLength]
+				callbackData = fmt.Sprintf("admin:bdtech:procedure:view:svyno_sobaka_bot:%s", shortName)
+				log.Printf("⚠️ Укорочен callback_data для %s -> %s", procName, shortName)
+			}
+		}
 
 		// Создаем кнопку
 		button := tgbotapi.NewInlineKeyboardButtonData(buttonText, callbackData)
+		buttonRows = append(buttonRows, tgbotapi.NewInlineKeyboardRow(button))
 		buttonRows = append(buttonRows, tgbotapi.NewInlineKeyboardRow(button))
 	}
 
