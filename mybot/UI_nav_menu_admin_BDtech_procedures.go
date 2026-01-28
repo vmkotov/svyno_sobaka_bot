@@ -184,7 +184,6 @@ func showProceduresList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 		// Создаем кнопку
 		button := tgbotapi.NewInlineKeyboardButtonData(buttonText, callbackData)
 		buttonRows = append(buttonRows, tgbotapi.NewInlineKeyboardRow(button))
-		buttonRows = append(buttonRows, tgbotapi.NewInlineKeyboardRow(button))
 	}
 
 	// Добавляем навигацию
