@@ -14,8 +14,8 @@ import (
 
 // Константы для меню процедур
 const (
-	proceduresPerPage = 10
-	procedureMaxNameLength     = 30
+	proceduresPerPage      = 10
+	procedureMaxNameLength = 30
 )
 
 // HandleBDtechProceduresCallback - обработка раздела процедур
