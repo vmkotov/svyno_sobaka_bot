@@ -45,7 +45,7 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 			}
 			return
 		}
-		
+
 		// Обработка остальных кнопок триггера (нужно >=5 частей)
 		if len(parts) >= 5 {
 			switch parts[2] {
@@ -70,18 +70,19 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 				}
 			}
 		}
-		
+
 		// Если не новые кнопки, то это детальная карточка
 		// admin:trigger:detail:TECH_KEY (должно быть 4 части)
 		if len(parts) >= 4 && parts[2] == "detail" {
 			HandleAdminTriggerDetailCallback(bot, callbackQuery, parts, db)
 			return
 		}
-		
+
 		log.Printf("⚠️ Неизвестный trigger callback: %v", parts)
-		
+
 	case "bdtech":
-		log.Printf("🛠️ BDtech операции от @%s", callbackQuery.From.UserName)
+	case "proc":
+		log.Printf("⚙️ Обработка процедур от @%s", callbackQuery.From.UserName)
 		HandleBDtechCallback(bot, callbackQuery, parts, db)
 	case "home":
 		log.Printf("🏠 Главная из админки от @%s", callbackQuery.From.UserName)
@@ -135,19 +136,19 @@ func showAdminMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQuery) 
 
 	// Создаем inline-клавиатуру с четырьмя кнопками ГОРИЗОНТАЛЬНО
 	refreshButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🔄 Обновить", 
+		"🔄 Обновить",
 		"admin:refresh",
 	)
 	triggersButton := tgbotapi.NewInlineKeyboardButtonData(
-		"📋 Триггеры", 
+		"📋 Триггеры",
 		"admin:triggers:list",
 	)
 	bdtechButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🛠️ БД Тех", 
+		"🛠️ БД Тех",
 		"admin:bdtech:menu",
 	)
 	homeButton := tgbotapi.NewInlineKeyboardButtonData(
-		"🏠 Главная", 
+		"🏠 Главная",
 		"admin:home",
 	)
 
@@ -194,15 +195,15 @@ func handleAdminRefreshTriggers(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Ca
 	// Ждем 3 секунды и возвращаем в стартовое меню
 	go func() {
 		time.Sleep(3 * time.Second)
-		
+
 		// Проверяем админские права для правильного меню
 		if isAdmin(callbackQuery.From.ID) {
 			SendAdminMainMenu(bot, callbackQuery.Message.Chat.ID)
 		} else {
 			SendUserMainMenu(bot, callbackQuery.Message.Chat.ID)
 		}
-		
-		log.Printf("🔙 Автоматический возврат в стартовое меню для @%s", 
+
+		log.Printf("🔙 Автоматический возврат в стартовое меню для @%s",
 			callbackQuery.From.UserName)
 	}()
 }
@@ -232,6 +233,6 @@ func showAdminTriggersMenu(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		log.Printf("❌ Ошибка отправки админского меню триггеров: %v", err)
 	}
 
-	log.Printf("✅ Админское меню триггеров (страница %d) отправлено для @%s", 
+	log.Printf("✅ Админское меню триггеров (страница %d) отправлено для @%s",
 		page, callbackQuery.From.UserName)
 }
