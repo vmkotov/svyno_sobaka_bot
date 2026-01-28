@@ -81,6 +81,8 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		log.Printf("⚠️ Неизвестный trigger callback: %v", parts)
 
 	case "bdtech":
+		log.Printf("🛠️ БД Тех операции от @%s", callbackQuery.From.UserName)
+		HandleBDtechCallback(bot, callbackQuery, parts, db)
 	case "proc":
 		log.Printf("⚙️ Обработка процедур от @%s", callbackQuery.From.UserName)
 		HandleBDtechCallback(bot, callbackQuery, parts, db)
