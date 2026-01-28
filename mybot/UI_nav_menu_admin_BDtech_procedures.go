@@ -39,9 +39,10 @@ func HandleBDtechProceduresCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotap
 
 	case "view":
 		// Просмотр конкретной процедуры
-		if len(parts) >= 3 {
-			schema := parts[1]
-			procedureName := parts[2]
+		// Новый формат: admin:proc:view:schema:procedureName
+		if len(parts) >= 5 {
+			schema := parts[3]
+			procedureName := parts[4]
 			viewProcedureCode(bot, callbackQuery, db, schema, procedureName)
 			return
 		}
@@ -170,14 +171,19 @@ func showProceduresList(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQu
 		buttonText := formatProcedureButton(procName, procType, procNum)
 
 		// Создаем callback_data с проверкой длины (макс 64 байта в Telegram)
-		callbackData := fmt.Sprintf("admin:bdtech:procedure:view:svyno_sobaka_bot:%s", procName)
+		const shortPrefix = "admin:proc:"
+		schema := "svyno_sobaka_bot"
+		callbackData := fmt.Sprintf("%sview:%s:%s", shortPrefix, schema, procName)
+
+		// Логируем для отладки
+		log.Printf("📏 Callback для %s.%s: %d символов (макс: 64)", schema, procName, len(callbackData))
 		if len(callbackData) > 64 {
 			// Укорачиваем имя процедуры
-			maxProcNameLength := 64 - len("admin:bdtech:procedure:view:svyno_sobaka_bot:")
+			prefixLength := len(shortPrefix) + len("view:") + len(schema) + 1
+			maxProcNameLength := 64 - prefixLength
 			if maxProcNameLength > 0 && len(procName) > maxProcNameLength {
 				shortName := procName[:maxProcNameLength]
-				callbackData = fmt.Sprintf("admin:bdtech:procedure:view:svyno_sobaka_bot:%s", shortName)
-				log.Printf("⚠️ Укорочен callback_data для %s -> %s", procName, shortName)
+				callbackData = fmt.Sprintf("%sview:%s:%s", shortPrefix, schema, shortName)
 			}
 		}
 
@@ -368,7 +374,7 @@ func viewProcedureCode(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.CallbackQue
 	fullCode := header + procedureCode
 
 	// Создаем имя файла
-	fileName := fmt.Sprintf("%s.%s.sql", schema, procedureName)
+	fileName := fmt.Sprintf("%s.%s.txt", schema, procedureName)
 
 	// Отправляем как файл
 	file := tgbotapi.FileBytes{
