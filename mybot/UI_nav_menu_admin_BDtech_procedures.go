@@ -40,9 +40,9 @@ func HandleBDtechProceduresCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotap
 	case "view":
 		// Просмотр конкретной процедуры
 		// Новый формат: admin:proc:view:schema:procedureName
-		if len(parts) >= 5 {
-			schema := parts[3]
-			procedureName := parts[4]
+		if len(parts) >= 3 {
+			schema := parts[1]
+			procedureName := parts[2]
 			viewProcedureCode(bot, callbackQuery, db, schema, procedureName)
 			return
 		}
@@ -271,21 +271,21 @@ func createProceduresNavigationButtons(currentPage, totalProcedures int) []tgbot
 
 	// Кнопка "Назад" (если не первая страница)
 	if hasPrevPage {
-		callbackData := fmt.Sprintf("admin:bdtech:procedures:page:%d", currentPage-1)
+		callbackData := fmt.Sprintf("admin:proc:page:%d", currentPage-1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏪ Назад", callbackData)
 		buttons = append(buttons, button)
 	}
 
 	// Кнопка "Главная страница" (если есть пагинация)
 	if totalPages > 1 {
-		callbackData := "admin:bdtech:procedures:menu"
+		callbackData := "admin:proc:menu"
 		button := tgbotapi.NewInlineKeyboardButtonData("📄 Страница 1", callbackData)
 		buttons = append(buttons, button)
 	}
 
 	// Кнопка "Далее" (если не последняя страница)
 	if hasNextPage {
-		callbackData := fmt.Sprintf("admin:bdtech:procedures:page:%d", currentPage+1)
+		callbackData := fmt.Sprintf("admin:proc:page:%d", currentPage+1)
 		button := tgbotapi.NewInlineKeyboardButtonData("⏩ Далее", callbackData)
 		buttons = append(buttons, button)
 	}

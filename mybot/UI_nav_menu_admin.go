@@ -85,7 +85,7 @@ func HandleAdminUICallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callbac
 		HandleBDtechCallback(bot, callbackQuery, parts, db)
 	case "proc":
 		log.Printf("⚙️ Обработка процедур от @%s", callbackQuery.From.UserName)
-		HandleBDtechCallback(bot, callbackQuery, parts, db)
+		HandleBDtechProceduresCallback(bot, callbackQuery, parts[2:], db)
 	case "home":
 		log.Printf("🏠 Главная из админки от @%s", callbackQuery.From.UserName)
 		EditUserMenu(bot, callbackQuery.Message.Chat.ID, callbackQuery.Message.MessageID)
