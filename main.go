@@ -112,6 +112,10 @@ func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 		return
 	}
 
+	// 📥 ЛОГИРОВАНИЕ: Сохраняем сырой JSON для отладки
+	jsonChatID := int64(-1003885944613) // Чат для JSON логов
+	mybot.SendMessageOriginalJSON(bot, body, jsonChatID)
+
 	var update tgbotapi.Update
 	if err := json.Unmarshal(body, &update); err != nil {
 		log.Printf("❌ Ошибка парсинга JSON: %v", err)
