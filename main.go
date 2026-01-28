@@ -96,7 +96,7 @@ func main() {
 	}
 }
 
-// handleWebhook - обработка вебхука  от Telegram
+// handleWebhook - обработка вебхука от Telegram
 func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 	forwardChatID int64, db *sql.DB) {
 
