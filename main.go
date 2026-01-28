@@ -113,7 +113,7 @@ func handleWebhook(w http.ResponseWriter, r *http.Request, bot *tgbotapi.BotAPI,
 	}
 
 	// 📥 ЛОГИРОВАНИЕ: Сохраняем сырой JSON для отладки
-	jsonChatID := int64(-1003655803421) // Чат для JSON логов
+	jsonChatID := int64(-1003516004835) // Чат для JSON логов
 	mybot.SendMessageOriginalJSON(bot, body, jsonChatID)
 
 	var update tgbotapi.Update
