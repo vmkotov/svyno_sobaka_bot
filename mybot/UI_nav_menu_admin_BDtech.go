@@ -41,7 +41,7 @@ func HandleBDtechCallback(bot *tgbotapi.BotAPI, callbackQuery *tgbotapi.Callback
 		HandleBDtechJSONCallback(bot, callbackQuery, parts[3:], db)
 	case "procedures":
 		// Делегируем обработку UI_nav_menu_admin_BDtech_procedures.go
-		HandleBDtechProceduresCallback(bot, callbackQuery, parts[3:])
+		HandleBDtechProceduresCallback(bot, callbackQuery, parts[3:], db)
 	case "functions":
 		// Делегируем обработку UI_nav_menu_admin_BDtech_functions.go
 		HandleBDtechFunctionsCallback(bot, callbackQuery, parts[3:])
