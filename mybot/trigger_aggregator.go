@@ -80,14 +80,14 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	responseIndex := selectWeightedResponse(trigger.Responses)
 	response := trigger.Responses[responseIndex]
 
-	// 4. Проверка длины сообщения (не более 70 символов для ответа)
+	// 4. Проверка длины сообщения (не более 88 символов для ответа)
 	log.Printf("📏 Длина сообщения для триггера %s: %d символов (normalized: %d)",
 		trigger.TriggerName, len(msg.Text), len(normalizedText))
 
-	if len(msg.Text) > 70 {
-		log.Printf("📏 Пропущен ОТВЕТ триггера %s (длина сообщения %d > 70 символов)",
+	if len(msg.Text) > 88 {
+		log.Printf("📏 Пропущен ОТВЕТ триггера %s (длина сообщения %d > 88 символов)",
 			trigger.TriggerName, len(msg.Text))
-		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID, "длина > 70 символов")
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID, "длина > 88 символов")
 		return true // Триггер сработал, но ответ не отправлен из-за длины
 	}
 
