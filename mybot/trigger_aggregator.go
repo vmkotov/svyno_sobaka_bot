@@ -80,14 +80,14 @@ func checkSingleTrigger(bot *tgbotapi.BotAPI, msg *tgbotapi.Message,
 	responseIndex := selectWeightedResponse(trigger.Responses)
 	response := trigger.Responses[responseIndex]
 
-	// 4. Проверка длины сообщения (не более 50 символов для ответа)
-	log.Printf("📏 Длина normalizedText для триггера %s: %d символов (original: %d)",
-		trigger.TriggerName, len(normalizedText), len(msg.Text))
-	
-	if len(normalizedText) > 50 {
-		log.Printf("📏 Пропущен ОТВЕТ триггера %s (длина сообщения %d > 50 символов)",
-			trigger.TriggerName, len(normalizedText))
-		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID, "длина > 50 символов")
+	// 4. Проверка длины сообщения (не более 70 символов для ответа)
+	log.Printf("📏 Длина сообщения для триггера %s: %d символов (normalized: %d)",
+		trigger.TriggerName, len(msg.Text), len(normalizedText))
+
+	if len(msg.Text) > 70 {
+		log.Printf("📏 Пропущен ОТВЕТ триггера %s (длина сообщения %d > 70 символов)",
+			trigger.TriggerName, len(msg.Text))
+		sendTriggerLogToChat(bot, msg, trigger, foundPatterns, false, responseIndex, logChatID, "длина > 70 символов")
 		return true // Триггер сработал, но ответ не отправлен из-за длины
 	}
 
@@ -231,14 +231,14 @@ func escapeMarkdownForLog(text string) string {
 	if text == "" {
 		return ""
 	}
-	
+
 	// Минимальный набор символов для экранирования в логах
 	specialChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "=", "|", "{", "}", "\\"}
-	
+
 	result := text
 	for _, char := range specialChars {
 		result = strings.ReplaceAll(result, char, "\\"+char)
 	}
-	
+
 	return result
 }
