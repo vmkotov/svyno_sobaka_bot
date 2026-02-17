@@ -85,7 +85,7 @@ func formatStatsMessage(stats []UserStat, chatID int64) string {
 
 	// Формируем заголовок
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("📊 *Статистика свинособак в \"%s\":*\n\n", escapeMarkdown(chatTitle)))
+	builder.WriteString(fmt.Sprintf("📊 **Статистика свинособак в \"%s\":**\n\n", escapeMarkdown(chatTitle)))
 
 	// Определяем лимит показа (не больше 15, чтобы не превысить лимит сообщения)
 	limit := 15
@@ -96,10 +96,10 @@ func formatStatsMessage(stats []UserStat, chatID int64) string {
 	// Формируем строки статистики
 	for i := 0; i < limit; i++ {
 		stat := stats[i]
-		
+
 		// Формируем имя пользователя по правилам: @username → Имя Фамилия → Имя → ID
 		userName := formatUserName(stat)
-		
+
 		// Добавляем эмодзи для топ-3
 		emoji := ""
 		switch i {
@@ -110,11 +110,11 @@ func formatStatsMessage(stats []UserStat, chatID int64) string {
 		case 2:
 			emoji = "🥉 "
 		}
-		
+
 		// Добавляем строку
-		builder.WriteString(fmt.Sprintf("%s%s — *%d* раз\n", 
-			emoji, 
-			escapeMarkdown(userName), 
+		builder.WriteString(fmt.Sprintf("%s%s — *%d* раз\n",
+			emoji,
+			escapeMarkdown(userName),
 			stat.Cnt))
 	}
 
@@ -133,17 +133,17 @@ func formatUserName(stat UserStat) string {
 	if stat.Username != "" {
 		return "@" + stat.Username
 	}
-	
+
 	// Если есть имя и фамилия
 	if stat.FirstName != "" && stat.LastName != "" {
 		return stat.FirstName + " " + stat.LastName
 	}
-	
+
 	// Если есть только имя
 	if stat.FirstName != "" {
 		return stat.FirstName
 	}
-	
+
 	// Если ничего нет, возвращаем ID (хотя в JSON всегда есть first_name)
 	return fmt.Sprintf("ID: %d", stat.ChatID) // fallback
 }
