@@ -77,15 +77,15 @@ func formatStatsMessage(stats []UserStat, chatID int64) string {
 		return stats[i].Cnt > stats[j].Cnt
 	})
 
-	// Определяем название чата
+	// Определяем название чата и ЭКРАНИРУЕМ его
 	chatTitle := "этом чате"
 	if len(stats) > 0 {
-		chatTitle = stats[0].Title
+		chatTitle = escapeMarkdown(stats[0].Title)
 	}
 
-	// Формируем заголовок
+	// Формируем заголовок (НЕ экранируем звездочки в шаблоне)
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("📊 **Статистика свинособак в \"%s\":**\n\n", escapeMarkdown(chatTitle)))
+	builder.WriteString(fmt.Sprintf("📊 *Статистика свинособак в \"%s\":*\n\n", chatTitle))
 
 	// Определяем лимит показа (не больше 15, чтобы не превысить лимит сообщения)
 	limit := 15
@@ -96,9 +96,9 @@ func formatStatsMessage(stats []UserStat, chatID int64) string {
 	// Формируем строки статистики
 	for i := 0; i < limit; i++ {
 		stat := stats[i]
-
-		// Формируем имя пользователя по правилам: @username → Имя Фамилия → Имя → ID
-		userName := formatUserName(stat)
+		
+		// Формируем имя пользователя и ЭКРАНИРУЕМ его
+		userName := escapeMarkdown(formatUserName(stat))
 
 		// Добавляем эмодзи для топ-3
 		emoji := ""
@@ -111,16 +111,16 @@ func formatStatsMessage(stats []UserStat, chatID int64) string {
 			emoji = "🥉 "
 		}
 
-		// Добавляем строку
+		// Добавляем строку (НЕ экранируем звездочки в шаблоне)
 		builder.WriteString(fmt.Sprintf("%s%s — *%d* раз\n",
 			emoji,
-			escapeMarkdown(userName),
+			userName,
 			stat.Cnt))
 	}
 
 	// Если записей больше лимита, добавляем информацию
 	if len(stats) > limit {
-		builder.WriteString(fmt.Sprintf("\n*... и ещё %d пользователей*", len(stats)-limit))
+		builder.WriteString(fmt.Sprintf("\n_... и ещё %d пользователей_", len(stats)-limit))
 	}
 
 	return builder.String()
