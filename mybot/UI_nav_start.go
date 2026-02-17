@@ -1,6 +1,6 @@
 // ============================================================================
 // ФАЙЛ: ui_commands.go
-// Обработка команд бота: /start, /help, /refresh_me
+// Обработка команд бота: /start, /help, /refresh_me, /stats
 // ============================================================================
 package mybot
 
@@ -19,8 +19,10 @@ func handleCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, db *sql.DB) {
 		HandleStartCommand(bot, msg)
 	case "help":
 		HandleHelpCommand(bot, msg)
-	case "refresh_me": // ← команда работает для всех
+	case "refresh_me":
 		HandleRefreshMeCommand(bot, msg, db)
+	case "stats":
+		HandleStatsCommand(bot, msg, db)
 		// Можно добавить другие команды
 	}
 }
@@ -46,6 +48,7 @@ func HandleHelpCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	text := "📋 Команды:\n" +
 		"/start - Начать\n" +
 		"/help - Помощь\n" +
+		"/stats - Статистика свинособак в чате\n" +
 		""
 	SendMessage(bot, msg.Chat.ID, text, "справка")
 }
