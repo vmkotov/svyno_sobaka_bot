@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: svyno-sobaka-bot
+    runtime: docker
+    repo: https://github.com/vmkotov/svyno_sobaka_bot
+    plan: free
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: BROADCAST_SECRET
+        sync: false
+    dockerfilePath: Dockerfile.yc
+    autoDeploy: true
