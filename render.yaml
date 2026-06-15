@@ -11,5 +11,5 @@ services:
         sync: false
       - key: BROADCAST_SECRET
         sync: false
-    dockerfilePath: Dockerfile.yc
+    dockerfilePath: Dockerfile
     autoDeploy: true
